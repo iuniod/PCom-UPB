@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "./checker/checker.py", line 77, in <module>
+    main()
+  File "./checker/checker.py", line 71, in main
+    passive(args.host, args.testname)
+  File "./checker/checker.py", line 38, in passive
+    status = fn(testname, packets)
+  File "/home/student/Documents/homework1-public/checker/tests.py", line 415, in icmp_timeout_p
+    if ICMP not in packets[1]:
+IndexError: list index out of range
