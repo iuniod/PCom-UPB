@@ -13,6 +13,8 @@
 #define MAX_LEN 1500
 
 #define ARP_TABLE_NAME "arp_table.txt"
+#define ARPOP_REQUEST 1
+#define ARPOP_REPLY 2
 
 typedef struct {
     size_t len;

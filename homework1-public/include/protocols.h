@@ -22,7 +22,7 @@ struct  ether_header {
 };
 
 /* IP Header */
-typedef struct {
+struct iphdr{
     // this means that version uses 4 bits, and ihl 4 bits
     uint8_t    ihl:4, version:4;   // we use version = 4
     uint8_t    tos;      // we don't use this, set to 0
@@ -35,7 +35,7 @@ typedef struct {
     // we need to recompute the checksum
     uint32_t   saddr;    // source address
     uint32_t   daddr;    // the destination of the packet
-} iphdr;
+};
 
 struct icmphdr
 {

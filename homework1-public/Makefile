@@ -4,7 +4,7 @@ LIBRARY=nope
 INCPATHS=include
 LIBPATHS=.
 LDFLAGS=
-CFLAGS=-c -Wall -Werror -Wno-error=unused-variable
+CFLAGS=-g -c -Wall -Werror -Wno-error=unused-variable
 CC=g++
 
 # Automatic generation of some important lists
@@ -21,10 +21,10 @@ BINARY=$(PROJECT)
 all: $(SOURCES) $(BINARY)
 
 $(BINARY): $(OBJECTS)
-	$(CC) $(LIBFLAGS) $(OBJECTS) $(LDFLAGS) -o $@
+	$(CC) $(LIBFLAGS) $(OBJECTS) $(LDFLAGS) -g -o $@
 
 .c.o:
-	$(CC) $(INCFLAGS) $(CFLAGS) -fPIC $< -o $@
+	$(CC) $(INCFLAGS) $(CFLAGS) -g -fPIC $< -o $@
 
 clean:
 
