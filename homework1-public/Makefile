@@ -1,5 +1,5 @@
 PROJECT=router
-SOURCES=router.cpp lib/lib.c
+SOURCES=router.cpp lib/lib.c lib/ip.cpp lib/arp.cpp lib/icmp.cpp
 LIBRARY=nope
 INCPATHS=include
 LIBPATHS=.

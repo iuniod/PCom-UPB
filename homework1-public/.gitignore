@@ -1,0 +1,5 @@
+router
+router_*
+*.o
+hosts_output
+.vscode

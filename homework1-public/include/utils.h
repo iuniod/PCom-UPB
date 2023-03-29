@@ -16,8 +16,8 @@
 #define ARPOP_REQUEST 1
 #define ARPOP_REPLY 2
 
-typedef struct {
+struct packet {
     size_t len;
 	char payload[MAX_LEN];
 	int interface;
-} packet;
+};
