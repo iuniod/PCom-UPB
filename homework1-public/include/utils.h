@@ -1,4 +1,7 @@
 
+#ifndef UTILS_H
+#define UTILS_H
+
 #include <bits/stdc++.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -18,6 +21,13 @@ struct packet {
 };
 
 using namespace std;
+
+/**
+ * @brief Print the mac address in format xx:xx:xx:xx:xx:xx
+ * 
+ * @param mac_addr the mac address
+ */
+void print_mac_addr(uint8_t* mac_addr);
 
 /**
  * @brief Parse the arp table from "arp_table.txt"
@@ -42,3 +52,6 @@ void parse_router_table(vector<struct route_table_entry> &routing_table, char* f
  * @return route_table_entry the next hop - the interface will be -1 if the destination is not reachable
  */
 route_table_entry get_next_hop(uint32_t ip_addr, vector<struct route_table_entry> &routing_table);
+
+
+#endif // UTILS_H

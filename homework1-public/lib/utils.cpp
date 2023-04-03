@@ -1,7 +1,13 @@
 #include "../include/utils.h"
 
-
 using namespace std;
+
+void print_mac_addr(uint8_t* mac_addr) {
+	for (int i = 0; i < 6; i++) {
+		cerr << hex << (int) mac_addr[i] << ":";
+	}
+	cerr << endl;
+}
 
 void parse_arp_table(unordered_map<uint32_t, uint8_t*> &arp_table) {
 	ifstream file("arp_table.txt");
@@ -71,5 +77,3 @@ route_table_entry get_next_hop(uint32_t ip_addr, vector<struct route_table_entry
 
 	return entry;
 }
-
-

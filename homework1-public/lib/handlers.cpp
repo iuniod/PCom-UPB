@@ -1,18 +1,18 @@
 #include "../include/handlers.h"
 
 void arp_request(uint32_t ip_addr, int interface, queue<packet> &packet_queue) {
-	// Create the ARP request packet
+	/* Create the ARP request packet */
 	packet pack;
 	pack.interface = interface;
 	pack.len = sizeof(struct ether_header) + sizeof(struct arp_header);
 
-	// Create the Ethernet header
+	/* Create the Ethernet header */
 	ether_header *eth_hdr = (ether_header *) pack.payload;
 	eth_hdr->ether_type = htons(ETHERTYPE_ARP);
 	get_interface_mac(interface, eth_hdr->ether_shost);
 	memset(eth_hdr->ether_dhost, 0xFF, 6);
 
-	// Create the ARP header
+	/* Create the ARP header */
 	arp_header *arp_hdr = (arp_header *) (pack.payload + ARP_OFFSET);
 	arp_hdr->htype = htons(1);
 	arp_hdr->ptype = htons(ETHERTYPE_IP);
@@ -24,17 +24,18 @@ void arp_request(uint32_t ip_addr, int interface, queue<packet> &packet_queue) {
 	memset(arp_hdr->tha, 0, 6);
 	arp_hdr->tpa = ip_addr;
 
+	/* Send the packet */
 	send_to_link(pack.interface, pack.payload, pack.len);
 
 }
 
 void icmp_handler(packet pack, int icmp_type) {
-	// The ICMP header starts right after the IP header
+	/* The ICMP header starts right after the IP header */
 	ether_header *eth_hdr = (ether_header *) pack.payload;
-	iphdr *ip_hdr = (iphdr *) (pack.payload + sizeof(struct ether_header));
-	icmphdr *icmp_hdr = (icmphdr *) (pack.payload + sizeof(struct ether_header) + sizeof(iphdr));
+	iphdr *ip_hdr = (iphdr *) (pack.payload + IP_OFFSET);
+	icmphdr *icmp_hdr = (icmphdr *) (pack.payload + ICMP_OFFSET);
 
-	// Check if the packet is an echo request
+	/* Check if the packet is an echo request */
 	if (icmp_type == ICMP_ECHOREPLY) {
 		ip_hdr->protocol = IPPROTO_ICMP;
 		// ip_hdr->tot_len = htons(sizeof(iphdr) + sizeof(struct icmphdr));
@@ -50,7 +51,7 @@ void icmp_handler(packet pack, int icmp_type) {
 		swap(eth_hdr->ether_shost, eth_hdr->ether_dhost);
 		pack.len = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct icmphdr);
 	} else {
-		// The packet is time exceeded or unreachable
+		/* The packet is time exceeded or unreachable */
         ip_hdr->protocol = IPPROTO_ICMP;
         ip_hdr->tot_len = htons(sizeof(iphdr) + sizeof(struct icmphdr));
         ip_hdr->check = 0;
@@ -65,7 +66,7 @@ void icmp_handler(packet pack, int icmp_type) {
         pack.len = sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct icmphdr);
 	}
 
-	// Send the packet
+	/* Send the packet */
 	send_to_link(pack.interface, pack.payload, pack.len);
 }
 
@@ -121,9 +122,9 @@ void ip_handler(packet pack, vector<struct route_table_entry> &routing_table,
 	/* Check if the next hop is in the ARP table */
 	if (arp_table.find(next_hop.next_hop) == arp_table.end()) {
 		cerr << "Next hop is not in the ARP table" << endl;
-		packet_queue.push(pack);
 
 		/* Send ARP request */
+		packet_queue.push(pack);
 		arp_request(next_hop.next_hop, next_hop.interface, packet_queue);
 
 		return;
@@ -135,18 +136,14 @@ void ip_handler(packet pack, vector<struct route_table_entry> &routing_table,
 	get_interface_mac(next_hop.interface, mac_addr);
 	memcpy(eth_hdr->ether_shost, mac_addr, 6);
 
-	// Print MAC addresses
+	/* Print MAC addresses */
 	cerr << "Source MAC: ";
-	for (int i = 0; i < 6; i++) {
-		cerr << hex << (int) eth_hdr->ether_shost[i] << ":";
-	}
-	cerr << endl;
-	cerr << "Destination MAC: ";
-	for (int i = 0; i < 6; i++) {
-		cerr << hex << (int) eth_hdr->ether_dhost[i] << ":";
-	}
-	cerr << endl;
+	print_mac_addr(eth_hdr->ether_shost);
 
+	cerr << "Destination MAC: ";
+	print_mac_addr(eth_hdr->ether_dhost);
+
+	/* Send the packet */
 	send_to_link(next_hop.interface, pack.payload, pack.len);
 }
 
