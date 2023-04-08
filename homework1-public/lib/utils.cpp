@@ -50,28 +50,40 @@ void parse_router_table(vector<struct route_table_entry> &routing_table, char* f
 
 	file.close();
 
-	// Sort the routing table by prefix ascending, and if the prefix is the same, sort by mask descending
 	sort(routing_table.begin(), routing_table.end(), [](const struct route_table_entry& a, const struct route_table_entry& b) {
-		if (a.prefix == b.prefix) {
-			return a.mask > b.mask;
+		if (ntohl(a.prefix & a.mask) < ntohl(b.prefix & b.mask)) {
+			return true;
+		} else if (ntohl(a.prefix & a.mask) > ntohl(b.prefix & b.mask)) {
+			return false;
+		} else {
+			return ntohl(a.mask) > ntohl(b.mask) ? false : true;
 		}
-		return a.prefix < b.prefix;
 	});
 }
 
-bool is_possible_match(uint32_t ip_addr, struct route_table_entry entry) {
-	return (ip_addr & entry.mask) == entry.prefix;
+int is_possible_match(uint32_t ip_addr, struct route_table_entry entry) {
+	return (ntohl(ip_addr & entry.mask)) == (ntohl(entry.prefix & entry.mask)) ? 0 : 
+			(ntohl(ip_addr & entry.mask) > ntohl(entry.prefix & entry.mask) ? 1 : -1);
 }
 
-route_table_entry get_next_hop(uint32_t ip_addr, vector<struct route_table_entry> &routing_table) {
+route_table_entry get_next_hop(uint32_t ip_addr, vector<struct route_table_entry> routing_table) {
 	struct route_table_entry entry;
 	entry.interface = -1;
+	entry.mask = 0;
 
-	for (auto it = routing_table.begin(); it != routing_table.end(); it++) {
-		if (is_possible_match(ip_addr, *it)) {
-			if (ntohl(it->mask) > ntohl(entry.mask)) {
-				entry = *it;
-			}
+	int left = 0, right = routing_table.size() - 1;
+
+	while (left <= right) {
+		int mid = (left + right) / 2;
+		int cmp = is_possible_match(ip_addr, routing_table[mid]);
+
+		if (cmp == 0) {
+			entry = routing_table[mid];
+			left = mid + 1;
+		} else if (cmp == 1) {
+			left = mid + 1;
+		} else {
+			right = mid - 1;
 		}
 	}
 

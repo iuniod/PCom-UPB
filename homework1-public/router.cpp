@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
 
 		struct ether_header* eth_hdr = (struct ether_header*) pack.payload;
 
-		cerr << "Routing table: " << argv[1] << endl;
+
 		switch(ntohs(eth_hdr->ether_type)) {
 			case ETHERTYPE_IP: {
 				cerr << "----- IP packet received -----" << endl;

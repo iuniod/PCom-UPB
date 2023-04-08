@@ -51,7 +51,7 @@ void parse_router_table(vector<struct route_table_entry> &routing_table, char* f
  * @param routing_table the routing table
  * @return route_table_entry the next hop - the interface will be -1 if the destination is not reachable
  */
-route_table_entry get_next_hop(uint32_t ip_addr, vector<struct route_table_entry> &routing_table);
+route_table_entry get_next_hop(uint32_t ip_addr, vector<struct route_table_entry> routing_table);
 
 
 #endif // UTILS_H
