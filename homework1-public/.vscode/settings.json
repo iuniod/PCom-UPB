@@ -21,6 +21,7 @@
         "sstream": "cpp",
         "syncstream": "cpp",
         "regex": "cpp",
-        "tuple": "cpp"
+        "tuple": "cpp",
+        "ostream": "cpp"
     }
 }

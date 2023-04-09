@@ -4,19 +4,6 @@
 #include <bits/stdc++.h>
 #include "utils.h"
 
-#define IP_OFFSET sizeof(struct ether_header)
-#define ICMP_OFFSET (sizeof(struct ether_header) + sizeof(struct iphdr))
-#define ARP_OFFSET sizeof(struct ether_header)
-
-#define ICMP_ECHO 8
-#define ICMP_ECHOREPLY 0
-#define ICMP_TIME_EXCEEDED 11
-#define ICMP_DEST_UNREACHABLE 3
-
-#define ARP_REQUEST 1
-#define ARP_REPLY 2
-#define ARPHRD_ETHER 1
-
 using namespace std;
 
 /**

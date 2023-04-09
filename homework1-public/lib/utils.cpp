@@ -50,6 +50,7 @@ void parse_router_table(vector<struct route_table_entry> &routing_table, char* f
 
 	file.close();
 
+	/* Sort routing table by prefix and mask */
 	sort(routing_table.begin(), routing_table.end(), [](const struct route_table_entry& a, const struct route_table_entry& b) {
 		if (ntohl(a.prefix & a.mask) < ntohl(b.prefix & b.mask)) {
 			return true;
@@ -61,20 +62,29 @@ void parse_router_table(vector<struct route_table_entry> &routing_table, char* f
 	});
 }
 
+/**
+ * @brief Checks if the given ip_addr is a possible match with the given entry
+ * 
+ * @param ip_addr IP address to be checked
+ * @param entry Entry to be checked against
+ * @return int 0 if the ip_addr is a possible match, 1 if it is greater than the entry, -1 otherwise
+ */
 int is_possible_match(uint32_t ip_addr, struct route_table_entry entry) {
 	return (ntohl(ip_addr & entry.mask)) == (ntohl(entry.prefix & entry.mask)) ? 0 : 
 			(ntohl(ip_addr & entry.mask) > ntohl(entry.prefix & entry.mask) ? 1 : -1);
 }
 
 route_table_entry get_next_hop(uint32_t ip_addr, vector<struct route_table_entry> routing_table) {
+	/* Default settings in case no match is found */
 	struct route_table_entry entry;
 	entry.interface = -1;
 	entry.mask = 0;
 
+	/* Binary search for efficient lookup */
 	int left = 0, right = routing_table.size() - 1;
 
 	while (left <= right) {
-		int mid = (left + right) / 2;
+		int mid = ((left + right) >> 1);
 		int cmp = is_possible_match(ip_addr, routing_table[mid]);
 
 		if (cmp == 0) {

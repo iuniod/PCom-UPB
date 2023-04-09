@@ -14,6 +14,28 @@
 
 #define MAX_LEN 1500
 
+#define ETHER_SIZE sizeof(struct ether_header)
+#define IP_SIZE sizeof(struct iphdr)
+#define ICMP_SIZE sizeof(struct icmphdr)
+#define ARP_SIZE sizeof(struct arp_header)
+
+#define IP_OFFSET ETHER_SIZE
+#define ICMP_OFFSET ETHER_SIZE + IP_SIZE
+#define ARP_OFFSET ETHER_SIZE
+
+#define ARP_LEN ETHER_SIZE + ARP_SIZE
+#define IP_LEN IP_SIZE + ICMP_SIZE
+#define ICMP_LEN ETHER_SIZE + IP_SIZE + ICMP_SIZE
+
+#define ICMP_ECHO 8
+#define ICMP_ECHOREPLY 0
+#define ICMP_TIME_EXCEEDED 11
+#define ICMP_DEST_UNREACHABLE 3
+
+#define ARP_REQUEST 1
+#define ARP_REPLY 2
+#define ARPHRD_ETHER 1
+
 struct packet {
     size_t len;
 	char payload[MAX_LEN];

@@ -1,1 +1,72 @@
-Repository for the first homework of the Communication Networks class. In this homework the students will implement the dataplane of a router.
+## ROUTER IMPLEMENTATION HOMEWORK
+
+### I. Overview
+
+In this homework, you can see the implementation of the data plane of a router. Further, you can see a skeleton of the implementation and each file's meaning.
+
+```
+.
+├── README                  # This file
+├── Makefile                # Makefile - it's the one from the skel with some changes to support `.cpp` files
+├── include                # Header files
+│   ├── handlers.h               # header file for ip and arp handlers
+│   ├── lib.h             # header file for lib - from skel
+│   ├── protocols.h                # header file for protocols - from skel
+│   ├── utils.h            # header file for auxiliary functions that can not be grouped in other files
+├── lib                   # Library files
+│   ├── handlers.cpp               # ip and arp handlers + auxiliary functions for them such as the ICMP handler
+│   ├── lib.c             # lib - from skel
+│   ├── utils.cpp            # auxiliary functions
+├── router.cpp              # Main file
+```
+
+### II. What I implemented and how
+
+In the requirements, we had to implement the following:
+
+- [x] The directing process
+- [x] The Longest Prefix Match in an efficient way (less than O(n))
+- [x] The ARP process
+- [x] The ICMP process
+
+#### 1. The directing process
+
+I started with this task because it was the most important one in my view. To start with, in the `router.cpp` file, I used a switch to check the packet's protocol. If it is IP, then I call the `ip_handler()` function, and if it is ARP, then I call the `arp_handler()` function - both in the `handlers.cpp` file.
+
+In the `ip_handler()` function, I followed the steps from the requirements:
+
+1. Check the checksum, and if it is wrong, drop the packet
+2. Check if the packet is for me, and if it is an ICMP request, then I send an ICMP reply message and drop the packet
+3. Check the TTL, and if it is less than 2, then I send an ICMP TIME EXCEEDED message and drop the packet
+4. Check if there is a next hop, and if there is not, then I send an ICMP UNREACHABLE message and drop the packet - I used the value of the interface to check if there is a next hop: When I am searching for the next hop, I set the value of the interface to -1, and if I don't find a next hop, then the value of the interface will remain -1
+5. Update the TTL and the checksum
+6. Check if there is an entry in the ARP cache, and if there is not, then I send an ARP request and add the packet to the queue - I implemented this when I was implementing the ARP process
+7. Set the MAC addresses of the ethernet header and send the packet
+
+#### 2. The Longest Prefix Match
+
+I implemented this last because I do not find it more important than the ICMP and arp protocols.
+
+After I finish reading the router table, I sort it according to `prefix & mask` in ascending order, and the case of equality, I sort it according to the `mask` in ascending order. This way, I can use binary search to find the longest prefix match.
+
+In the `get_next_hop()` function, I am using binary search to find the longest prefix match. I start with the middle element of the routing table and according to the value of the `prefix & mask` and the `mask`, I decide if I have to search in the left or the right part of the router table. I used an auxiliary function, `is_possible_match()`, to compare the prefix, mask, and the ip address of the packet.
+
+#### 3. The ARP process
+
+I implemented this process in the `arp_handler()` function. I followed the steps from the requirements:
+
+1. Check the opcode, and if it is not ARP REQUEST or ARP REPLY, then I drop the packet
+2. If it is ARP REQUEST, then send an ARP REPLY message
+3. If it is ARP REPLY, then I add the entry in the ARP cache and send all the packets from the queue
+
+Moreover, when I am searching for the arp entry in the cache, I check if the entry is valid, and if it is not, then I send an ARP request and add the packet to the queue.
+
+#### 4. The ICMP process
+
+I implemented this process in the `icmp_handler()` function. I am using the same packet and just modifying the necessary fields. In all 3 cases (ECHO REPLY, TIME EXCEEDED, UNREACHABLE), I am using the same function and it differs only in the type of the ICMP message.
+
+### III. Why I chose to implement in C++
+
+I chose to implement in C++ because I am more familiar with this language and I think that it is easier to implement in C++ than in c.
+
+Moreover, I wanted to use an unordered map to store the arp entries, for a faster search. I could not use an unordered map in c, because it is not a standard library. I could use a hash map, but I did not want to implement it myself.
