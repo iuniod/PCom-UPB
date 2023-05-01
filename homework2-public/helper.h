@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <functional>
 #include <string>
+#include <cstring>
+#include <sys/socket.h>
 
 #define MAXLINE 1024
 
@@ -23,6 +25,8 @@
 			exit(EXIT_FAILURE);                                                      \
 		}                                                                          \
 	} while (0)
+
+void send_message(char* message, int socketfd);
 
 struct subscriber {
 	char id[10];

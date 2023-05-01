@@ -9,6 +9,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 #include <sys/epoll.h> 
+#include <iostream>
 
 #include "helper.h"
 
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
 					// send exit message to server
 					char buffer[MAXLINE];
 					sprintf(buffer, "exit %s", argv[1]);
-					send(socketfd, buffer, strlen(buffer), 0);
+					send_message(buffer, socketfd);
 					close(socketfd);
 					return 0;
 				}

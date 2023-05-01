@@ -145,7 +145,7 @@ int Server::handler() {
 				if (already_connected) {
 					std::cout << "Client " << client.id << " already connected." << status << std::endl;
 					// send exit message
-					send(connection_socket, "exit", 4, 0);
+					send_message("exit", connection_socket);
 					close(connection_socket);
 					continue;
 				}
@@ -184,14 +184,6 @@ int Server::handler() {
 						continue;
 					}
 					std::cout << "Client " << client_id << " disconnected." << std::endl;
-
-					// remove client from epoll
-					if (epoll_ctl(epollfd, EPOLL_CTL_DEL, events[i].data.fd, NULL) == -1) {
-						perror("epoll_ctl: listen_sock");
-						exit(EXIT_FAILURE);
-					}
-
-					close(events[i].data.fd);
 					continue;
 				}
 			}

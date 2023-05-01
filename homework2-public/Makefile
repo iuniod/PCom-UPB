@@ -8,9 +8,11 @@ CFLAGS = -w -Wall
 
 SERVER_SOURCE_FILES = \
 	server.cpp \
+	helper.cpp \
 
 CLIENT_SOURCE_FILES = \
 	tcp_client.cpp \
+	helper.cpp \
  
 # SINGLE_HEADERS =
 
