@@ -22,6 +22,8 @@ int main(int argc, char *argv[])
 		printf("Usage: %s <ID_CLIENT> <IP_SERVER> <PORT_SERVER>\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
+
+	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 	
 	/* Clean buffers and structures*/
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -74,14 +76,15 @@ int main(int argc, char *argv[])
 					// send exit message to server
 					char buffer[MAXLINE];
 					sprintf(buffer, "exit %s", argv[1]);
-					send_message(buffer, socketfd);
+					send_message(buffer, socketfd, strlen(buffer) + 1);
 					close(socketfd);
 					return 0;
 				}
 				// [TODO] subscribe and unsubscribe
 			} else if (event.data.fd == socketfd) {
 				char buffer[MAXLINE];
-				int n = read(socketfd, buffer, MAXLINE);
+				char number[MAXLINE];
+				int n = receive_message(buffer, socketfd);
 				if (n == 0) {
 					close(socketfd);
 					return 0;

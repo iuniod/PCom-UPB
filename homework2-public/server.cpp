@@ -129,7 +129,7 @@ int Server::handler() {
 
 				// receive clients struct
 				subscriber client;
-				recv(connection_socket, &client, sizeof(client), 0);
+				receive_message((char*) &client, connection_socket);
 				
 				// check if client is already connected
 				bool already_connected = false;
@@ -143,9 +143,9 @@ int Server::handler() {
 				}
 
 				if (already_connected) {
-					std::cout << "Client " << client.id << " already connected." << status << std::endl;
+					std::cout << "Client " << client.id << " already connected." << std::endl;
 					// send exit message
-					send_message("exit", connection_socket);
+					send_message("exit", connection_socket, 4);
 					close(connection_socket);
 					continue;
 				}
@@ -159,13 +159,14 @@ int Server::handler() {
 
 			if (events[i].events & EPOLLIN) {
 				char buffer[MAXLINE];
-				int n = recv(events[i].data.fd, buffer, MAXLINE, 0);
+				char number[10];
+				int n = receive_message(buffer, events[i].data.fd);
 				if (n == 0) {
 					close(events[i].data.fd);
 					continue;
 				}
 
-				// check if client is exiting
+				// check if client is exitingsend_message
 				if (strncmp(buffer, "exit", 4) == 0) {
 					char client_id[10];
 					strncpy(client_id, buffer + 5, 10);
@@ -197,6 +198,8 @@ int main(int argc, char *argv[]) {
 		printf("Usage: %s <port>\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
+
+	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 
 	Server server(atoi(argv[1]));
 

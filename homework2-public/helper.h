@@ -26,7 +26,9 @@
 		}                                                                          \
 	} while (0)
 
-void send_message(char* message, int socketfd);
+void send_message(char* message, int socketfd, int size);
+
+int receive_message(char* message, int socketfd);
 
 struct subscriber {
 	char id[10];
@@ -70,8 +72,7 @@ struct subscriber {
 	}
 
 	void send_register(int socketfd) {
-		// send the struct to the server
-		send(socketfd, this, sizeof(subscriber), 0);
+		send_message(this->id, socketfd, sizeof(this->id));
 	}
 };
 
@@ -115,7 +116,7 @@ struct topic {
 
 	void send_register(int socketfd) {
 		// send the struct to the server
-		send(socketfd, this, sizeof(topic), 0);
+		send_message((char*)this, socketfd, sizeof(topic));
 	}
 };
 
