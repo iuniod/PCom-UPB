@@ -7,7 +7,7 @@ void init_udp_connection(Server *server) {
 
 	/* Creating socket file descriptor */
 	if ( (server->udp_sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-		perror("socket creation failed");
+		DIE(true, "socket creation failed");
 		exit(EXIT_FAILURE);
 	}
 
@@ -15,9 +15,7 @@ void init_udp_connection(Server *server) {
 
 	/* Make ports reusable, in case we run this really fast two times in a row */
 	int enable = 1;
-	if (setsockopt(server->udp_sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
-		perror("setsockopt(SO_REUSEADDR) failed");
-	}
+	DIE(setsockopt(server->udp_sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0, "setsockopt(SO_REUSEADDR) failed");
 
 	/* Filling server information */
 	server->udp_socket.sin_family = AF_INET; // IPv4
@@ -27,7 +25,7 @@ void init_udp_connection(Server *server) {
 	/* Bind the socket with the server address */
 	if (bind(server->udp_sockfd, (const struct sockaddr *)&server->udp_socket,
 			sizeof(server->udp_socket)) < 0 ) {
-		perror("bind failed");
+		DIE(true, "bind failed");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -35,16 +33,13 @@ void init_udp_connection(Server *server) {
 void init_tcp_connection(Server *server) {
 	/* Creating socket file descriptor */
 	if ( (server->tcp_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-		perror("socket creation failed");
+		DIE(true, "socket creation failed");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Make ports reusable, in case we run this really fast two times in a row */
 	int enable = 1;
-	if (setsockopt(server->tcp_sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
-		perror("setsockopt(SO_REUSEADDR) failed");
-	}
-
+	DIE(setsockopt(server->tcp_sockfd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0, "setsockopt(SO_REUSEPORT) failed");
 
 	/* Filling server information */
 	struct sockaddr_in server_addr;
@@ -55,13 +50,13 @@ void init_tcp_connection(Server *server) {
 	/* Bind the socket with the server address */
 	if (bind(server->tcp_sockfd, (const struct sockaddr *)&server_addr,
 			sizeof(server_addr)) < 0 ) {
-		perror("bind failed");
+		DIE(true, "bind failed");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Listen for connections */
 	if (listen(server->tcp_sockfd, 5) < 0) {
-		perror("listen");
+		DIE(true, "listen failed");
 		exit(EXIT_FAILURE);
 	}
 
@@ -69,8 +64,8 @@ void init_tcp_connection(Server *server) {
 	ev.events = EPOLLIN;
 	ev.data.fd = server->tcp_sockfd;
 	if (epoll_ctl(server->epollfd, EPOLL_CTL_ADD, server->tcp_sockfd, &ev) == -1) {
-		std::cout << server->epollfd << " " << server->tcp_sockfd << std::endl;
-		perror("epoll_ctl: listen_sock");
+		std::string s = "epoll_ctl: listen_sock failed: " + std::to_string(server->epollfd) + " " + std::to_string(server->tcp_sockfd);
+		DIE(true, s.c_str());
 		exit(EXIT_FAILURE);
 	}
 }
@@ -78,16 +73,16 @@ void init_tcp_connection(Server *server) {
 void Server::init_server(int port) {
 	epollfd = epoll_create1(0);
 	if (epollfd < 0) {
-		perror("epoll_create");
+		DIE(true, "epoll_create failed");
 		exit(EXIT_FAILURE);
 	}
 
-	// add stdin to epoll
+	/* Add STDIN_FILENO to epollfd */
 	struct epoll_event ev;
 	ev.events = EPOLLIN;
 	ev.data.fd = STDIN_FILENO;
 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev) == -1) {
-		perror("epoll_ctl: stdin");
+		DIE(true, "epoll_ctl: stdin failed");
 		exit(EXIT_FAILURE);
 	}
 
@@ -99,39 +94,46 @@ int Server::handler() {
 	for ( ; ; ) {
 		int nfds = epoll_wait(epollfd, events, MAX_CONNECTIONS, -1);
 		if (nfds == -1) {
-			perror("epoll_wait");
+			DIE(true, "epoll_wait failed");
 			exit(EXIT_FAILURE);
 		}
 
 		for (int i = 0; i < nfds; i++) {
-			// read from stdin
+			/* Read from STDIN_FILENO - only exit command allowed */
 			if (events[i].data.fd == STDIN_FILENO) {
-				char buffer[MAXLINE];
-				fgets(buffer, MAXLINE, stdin);
-				if (strncmp(buffer, "exit", 4) == 0) {
+				std::string command;
+				std::cin >> command;
+
+				if (command == "exit") {
 					return -1;
 				}
-
+				
+				std::cout << "[STDIN_FILENO error] Invalid command." << std::endl;
 				continue;
 			}
+
+			/* Reading new connection from TCP socket */
 			if (events[i].data.fd == tcp_sockfd) {
 				int len;
 				struct sockaddr_in cli;
+
+				/* Accept new connection */
 				int connection_socket = accept(tcp_sockfd, (struct sockaddr *) &cli, (socklen_t *) &len);
 				
+				/* Add new connection to epollfd */
 				struct epoll_event ev;
 				ev.events = EPOLLIN;
 				ev.data.fd = connection_socket;
 				if (epoll_ctl(epollfd, EPOLL_CTL_ADD, connection_socket, &ev) == -1) {
-					perror("epoll_ctl: listen_sock");
+					DIE(true, "epoll_ctl: listen_sock failed");
 					exit(EXIT_FAILURE);
 				}
 
-				// receive clients struct
+				/* Receive client struct */
 				subscriber client;
 				receive_message((char*) &client, connection_socket);
 				
-				// check if client is already connected
+				/* Check if client is already connected */
 				bool already_connected = false;
 				bool status = false;
 				for (auto it : subscribers) {
@@ -144,34 +146,35 @@ int Server::handler() {
 
 				if (already_connected) {
 					std::cout << "Client " << client.id << " already connected." << std::endl;
-					// send exit message
+					/* Send exit message to client and close connection */
 					send_message("exit", connection_socket, 4);
 					close(connection_socket);
 					continue;
 				}
 
 				std::cout << "New client " << client.id << " connected from" << inet_ntoa(cli.sin_addr) << ":" << ntohs(cli.sin_port) << "." << std::endl;
-				// add client to subscribers
+				/* Add new client to subscribers */
 				subscribers[client] = std::make_pair(true, std::vector<topic>());
-
 				continue;
 			}
 
+			/* Reading new message from TCP socket */
 			if (events[i].events & EPOLLIN) {
 				char buffer[MAXLINE];
-				char number[10];
+
+				/* Receive message */
 				int n = receive_message(buffer, events[i].data.fd);
 				if (n == 0) {
 					close(events[i].data.fd);
 					continue;
 				}
 
-				// check if client is exitingsend_message
+				/* Check if message is exit */
 				if (strncmp(buffer, "exit", 4) == 0) {
 					char client_id[10];
 					strncpy(client_id, buffer + 5, 10);
 
-					// set client as disconnected
+					/* Set client status to false - disconnected */
 					bool found = false;
 					for (auto &it : subscribers) {
 						if (strcmp(it.first.id, client_id) == 0) {
@@ -180,6 +183,8 @@ int Server::handler() {
 							break;
 						}
 					}
+
+					/* Check if client was found */
 					if (found == false) {
 						std::cout << "Client " << client_id << " not found." << std::endl;
 						continue;

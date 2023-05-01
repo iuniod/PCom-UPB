@@ -30,28 +30,32 @@ struct Server {
 	struct epoll_event events[MAX_CONNECTIONS];
 	std::unordered_map<subscriber, std::pair<bool, std::vector<topic>>, hash, equal_to> subscribers;
 
-	// constructor
 	Server(int port) {
 		this->port = port;
 		init_server(port);
 	}
 
-	// destructor
 	~Server() {
-		// send exit message to all clients
+		/* Send exit message to all subscribers that are connected */
 		for (auto& sub : subscribers) {
-			send(sub.first.socketfd, "exit", 4, 0);
+			if (sub.second.first == true) {
+				send_message("exit", sub.first.socketfd, 4);
+				close(sub.first.socketfd);
+			}
 		}
+
+		/* Close all sockets */
 		close(udp_sockfd);
 		close(tcp_sockfd);
 	}
 
-	// initialize the server
+	/* Initialize server */
 	void init_server(int port);
 
-	// accept a connection
+	/* Accept new connection */
 	int accept_connection();
 
+	/* Handle message from TCP & UDP sockets */
 	int handler();
 };
 

@@ -3,10 +3,18 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <functional>
-#include <string>
-#include <cstring>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/uio.h>
+#include <unistd.h>
+#include <sys/epoll.h> 
+#include <iostream>
+
+
 
 #define MAXLINE 1024
 
@@ -26,8 +34,22 @@
 		}                                                                          \
 	} while (0)
 
+/**
+ * @brief Send a message to a socket
+ * 
+ * @param message the message to be sent
+ * @param socketfd the socket to send the message to
+ * @param size the size of the message
+ */
 void send_message(char* message, int socketfd, int size);
 
+/**
+ * @brief Receive a message from a socket
+ * 
+ * @param message the message to be received
+ * @param socketfd the socket to receive the message from
+ * @return int the size of the message
+ */
 int receive_message(char* message, int socketfd);
 
 struct subscriber {
@@ -35,7 +57,6 @@ struct subscriber {
 	int port;
 	char ip[16];
 	int socketfd;
-	bool online;
 
 	subscriber(char* id, int port, char* ip, int socketfd) {
 		strcpy(this->id, id);
@@ -71,19 +92,20 @@ struct subscriber {
 		return *this;
 	}
 
+	/* Send the subscriber id to the server */
 	void send_register(int socketfd) {
 		send_message(this->id, socketfd, sizeof(this->id));
 	}
 };
 
-// hash function for unordered_map
+/* Hash function for unordered_map */
 struct hash {
 	size_t operator()(const subscriber& sub) const {
 		return std::hash<std::string>()(sub.id);
 	}
 };
 
-// equals function for unordered_map
+/* Equal function for unordered_map */
 struct equal_to {
 	bool operator()(const subscriber& sub1, const subscriber& sub2) const {
 		return (sub1.id == sub2.id);

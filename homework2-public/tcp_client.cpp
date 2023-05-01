@@ -1,16 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/uio.h>
-#include <unistd.h>
-#include <sys/epoll.h> 
-#include <iostream>
-
 #include "helper.h"
 
 int main(int argc, char *argv[])
@@ -52,13 +39,13 @@ int main(int argc, char *argv[])
 	int epollfd = epoll_create1(0);
 	DIE(epollfd < 0, "epoll_create1");
 
-	// add stdin to epoll
+	/* Add STDIN to epoll */
 	struct epoll_event event;
 	event.data.fd = STDIN_FILENO;
 	event.events = EPOLLIN;
 	DIE(epoll_ctl(epollfd, EPOLL_CTL_ADD, STDIN_FILENO, &event) < 0, "epoll_ctl");
 
-	// add socket to epoll
+	/* Add socket to epoll */
 	event.data.fd = socketfd;
 	event.events = EPOLLIN;
 	DIE(epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0, "epoll_ctl");
@@ -68,12 +55,13 @@ int main(int argc, char *argv[])
 			int n = epoll_wait(epollfd, &event, 1, -1);
 			DIE(n < 0, "epoll_wait");
 
+			/* If STDIN is ready to read */
 			if (event.data.fd == STDIN_FILENO) {
-				char buffer[MAXLINE];
-				fgets(buffer, MAXLINE, stdin);
-				buffer[strlen(buffer) - 1] = '\0';
-				if (strcmp(buffer, "exit") == 0) {
-					// send exit message to server
+				std::string command;
+				std::cin >> command;
+
+				if (command == "exit") {
+					/* Send exit message to server */
 					char buffer[MAXLINE];
 					sprintf(buffer, "exit %s", argv[1]);
 					send_message(buffer, socketfd, strlen(buffer) + 1);
@@ -81,15 +69,19 @@ int main(int argc, char *argv[])
 					return 0;
 				}
 				// [TODO] subscribe and unsubscribe
-			} else if (event.data.fd == socketfd) {
+				continue;
+			}			
+			/* If socket is ready to read */
+			if (event.data.fd == socketfd) {
+				/* Receive message from server */
 				char buffer[MAXLINE];
-				char number[MAXLINE];
 				int n = receive_message(buffer, socketfd);
 				if (n == 0) {
 					close(socketfd);
 					return 0;
 				}
 				
+				/* If the server is exiting */
 				if (strcmp(buffer, "exit") == 0) {
 					close(socketfd);
 					return 0;
