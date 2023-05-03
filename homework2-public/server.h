@@ -28,7 +28,7 @@ struct Server {
 	int listenfd;
 	int epollfd;
 	struct epoll_event events[MAX_CONNECTIONS];
-	std::unordered_map<subscriber, std::pair<bool, std::vector<topic>>, hash, equal_to> subscribers;
+	std::unordered_map<subscriber, client_subscription, hash, equal_to> subscribers;
 
 	Server(int port) {
 		this->port = port;
@@ -38,7 +38,7 @@ struct Server {
 	~Server() {
 		/* Send exit message to all subscribers that are connected */
 		for (auto& sub : subscribers) {
-			if (sub.second.first == true) {
+			if (sub.second.get_connection_status() == true) {
 				send_message("exit", sub.first.socketfd, 4);
 				close(sub.first.socketfd);
 			}

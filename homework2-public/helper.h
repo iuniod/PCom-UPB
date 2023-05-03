@@ -14,6 +14,7 @@
 #include <sys/epoll.h> 
 #include <iostream>
 #include <memory>
+#include <bits/stdc++.h>
 
 
 #define MAXLINE 1024
@@ -183,6 +184,55 @@ struct client_subscription {
 	bool is_connected;
 	std::vector<topic> topics;
 	std::queue<notification> notifications;
+
+	client_subscription() {
+		this->is_connected = true;
+		notifications = std::queue<notification>();
+		topics = std::vector<topic>();
+	}
+
+	bool get_connection_status() {
+		return this->is_connected;
+	}
+
+	void set_connection_status(bool status) {
+		this->is_connected = status;
+	}
+
+	std::vector<topic> get_topics() {
+		return this->topics;
+	}
+
+	void add_notification(notification notif) {
+		this->notifications.push(notif);
+	}
+
+	void add_topic(topic topic) {
+		this->topics.push_back(topic);
+	}
+
+	void remove_topic(char *topic_name) {
+		int n = this->topics.size();
+		for (auto it = this->topics.begin(); it != this->topics.end(); it++) {
+			if (strcmp(it->name, topic_name) == 0) {
+				this->topics.erase(it);
+				break;
+			}
+		}
+	}
+
+	void send_notifications(int socketfd) {
+		while (!this->notifications.empty()) {
+			notification notif = this->notifications.front();
+			send_message("notification", socketfd, 13);
+			send_message((char*)&notif, socketfd, sizeof(notification));
+			this->notifications.pop();
+		}
+	}
+
+	std::queue<notification> get_notifications() {
+		return this->notifications;
+	}
 };
 
 #endif  // _HELPER_H

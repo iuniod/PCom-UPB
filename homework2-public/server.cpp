@@ -146,11 +146,12 @@ int Server::handler() {
 				for (auto &it : subscribers) {
 					if (strcmp(it.first.id, client.id) == 0) {
 						status = true;
-						if (it.second.first == true) {
+						if (it.second.get_connection_status() == true) {
 							already_connected = true;
 							break;
 						} else {
-							it.second.first = true;
+							it.second.set_connection_status(true);
+							it.second.send_notifications(it.first.socketfd);
 						}
 					}
 				}
@@ -167,7 +168,7 @@ int Server::handler() {
 				/* Add new client to subscribers */
 				if (status == false) {
 					client.socketfd = connection_socket;
-					subscribers[client] = std::make_pair(true, std::vector<topic>());
+					subscribers[client] = client_subscription();
 				}
 				continue;
 			}
@@ -182,16 +183,22 @@ int Server::handler() {
 				
 				/* Send message to all subscribers */
 				for (auto &it : subscribers) {
-					if (it.second.first == true) {
-						for (auto &topic : it.second.second) {
+					if (it.second.get_connection_status() == true) {
+						for (auto &topic : it.second.get_topics()) {
 							if (strcmp(topic.name, notif.topic) == 0) {
 								send_message("notification", it.first.socketfd, 13);
 								send_message((char*) &notif, it.first.socketfd, sizeof(notif));
 								break;
 							}
 						}
-					} else if (it.second.first == true) {
-						/* TODO: send message to offline clients */
+					} else if (it.second.get_connection_status() == false) {
+						/* Send message to offline clients */
+						for (auto &topic : it.second.get_topics()) {
+							if (strcmp(topic.name, notif.topic) == 0 && topic.sf == 1) {
+								it.second.add_notification(notif);
+								break;
+							}
+						}
 					}
 				}
 
@@ -218,7 +225,7 @@ int Server::handler() {
 					bool found = false;
 					for (auto &it : subscribers) {
 						if (strcmp(it.first.id, client_id) == 0) {
-							it.second.first = false;
+							it.second.set_connection_status(false);
 							found = true;
 							break;
 						}
@@ -247,7 +254,7 @@ int Server::handler() {
 					for (auto &it : subscribers) {
 						if (strcmp(it.first.id, client_id) == 0) {
 							found = true;
-							it.second.second.push_back(topic(topic_name, atoi(sf)));
+							it.second.add_topic(topic(topic_name, atoi(sf)));
 							break;
 						}
 					}
@@ -273,12 +280,7 @@ int Server::handler() {
 					for (auto &it : subscribers) {
 						if (strcmp(it.first.id, client_id) == 0) {
 							found = true;
-							for (auto it2 = it.second.second.begin(); it2 != it.second.second.end(); ++it2) {
-								if (strcmp(it2->name, topic_name) == 0) {
-									it.second.second.erase(it2);
-									break;
-								}
-							}
+							it.second.remove_topic(topic_name);
 							break;
 						}
 					}
