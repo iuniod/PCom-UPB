@@ -1,15 +1,8 @@
 #include "server.h"
-#include "helper.h"
 
 void init_udp_connection(Server *server) {
-	char buffer[MAXLINE];
-	char *hello = "Hello from server";
-
 	/* Creating socket file descriptor */
-	if ( (server->udp_sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-		DIE(true, "socket creation failed");
-		exit(EXIT_FAILURE);
-	}
+	DIE((server->udp_sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0, "socket creation failed");
 
 	memset(&server->udp_socket, 0, sizeof(server->udp_socket));
 
@@ -23,11 +16,7 @@ void init_udp_connection(Server *server) {
 	server->udp_socket.sin_port = htons(server->port);
 
 	/* Bind the socket with the server address */
-	if (bind(server->udp_sockfd, (const struct sockaddr *)&server->udp_socket,
-			sizeof(server->udp_socket)) < 0 ) {
-		DIE(true, "bind failed");
-		exit(EXIT_FAILURE);
-	}
+	DIE(bind(server->udp_sockfd, (const struct sockaddr *)&server->udp_socket, sizeof(server->udp_socket)) < 0, "bind failed");
 
 	/* Add socket to epoll */
 	struct epoll_event ev;
@@ -38,10 +27,7 @@ void init_udp_connection(Server *server) {
 
 void init_tcp_connection(Server *server) {
 	/* Creating socket file descriptor */
-	if ( (server->tcp_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-		DIE(true, "socket creation failed");
-		exit(EXIT_FAILURE);
-	}
+	DIE((server->tcp_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0, "socket creation failed");
 
 	/* Make ports reusable, in case we run this really fast two times in a row */
 	int enable = 1;
@@ -54,44 +40,27 @@ void init_tcp_connection(Server *server) {
 	server_addr.sin_port = htons(server->port);
 
 	/* Bind the socket with the server address */
-	if (bind(server->tcp_sockfd, (const struct sockaddr *)&server_addr,
-			sizeof(server_addr)) < 0 ) {
-		DIE(true, "bind failed");
-		exit(EXIT_FAILURE);
-	}
+	DIE(bind(server->tcp_sockfd, (const struct sockaddr *)&server_addr, sizeof(server_addr)) < 0, "bind failed");
 
 	/* Listen for connections */
-	if (listen(server->tcp_sockfd, 5) < 0) {
-		DIE(true, "listen failed");
-		exit(EXIT_FAILURE);
-	}
+	DIE(listen(server->tcp_sockfd, 5) < 0, "listen failed");
 
 	/* Add socket to epoll */
 	struct epoll_event ev;
 	ev.events = EPOLLIN;
 	ev.data.fd = server->tcp_sockfd;
-	if (epoll_ctl(server->epollfd, EPOLL_CTL_ADD, server->tcp_sockfd, &ev) == -1) {
-		std::string s = "epoll_ctl: listen_sock failed: " + std::to_string(server->epollfd) + " " + std::to_string(server->tcp_sockfd);
-		DIE(true, s.c_str());
-		exit(EXIT_FAILURE);
-	}
+	DIE(epoll_ctl(server->epollfd, EPOLL_CTL_ADD, server->tcp_sockfd, &ev) < 0, "epoll_ctl");
 }
 
 void Server::init_server(int port) {
 	epollfd = epoll_create1(0);
-	if (epollfd < 0) {
-		DIE(true, "epoll_create failed");
-		exit(EXIT_FAILURE);
-	}
+	DIE(epollfd < 0, "epoll_create failed");
 
 	/* Add STDIN_FILENO to epollfd */
 	struct epoll_event ev;
 	ev.events = EPOLLIN;
 	ev.data.fd = STDIN_FILENO;
-	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev) == -1) {
-		DIE(true, "epoll_ctl: stdin failed");
-		exit(EXIT_FAILURE);
-	}
+	DIE(epoll_ctl(epollfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev) == -1, "epoll_ctl: stdin failed");
 
 	init_udp_connection(this);
 	init_tcp_connection(this);
@@ -100,10 +69,7 @@ void Server::init_server(int port) {
 int Server::handler() {
 	for ( ; ; ) {
 		int nfds = epoll_wait(epollfd, events, MAX_CONNECTIONS, -1);
-		if (nfds == -1) {
-			DIE(true, "epoll_wait failed");
-			exit(EXIT_FAILURE);
-		}
+		DIE(nfds == -1, "epoll_wait failed");
 
 		for (int i = 0; i < nfds; i++) {
 			/* Read from STDIN_FILENO - only exit command allowed */
@@ -111,11 +77,11 @@ int Server::handler() {
 				std::string command;
 				std::cin >> command;
 
-				if (command == "exit") {
+				if (command == EXIT) {
 					return -1;
 				}
-				
-				std::cout << "[STDIN_FILENO error] Invalid command." << std::endl;
+
+				std::cerr << "Invalid command." << std::endl;
 				continue;
 			}
 
@@ -131,10 +97,7 @@ int Server::handler() {
 				struct epoll_event ev;
 				ev.events = EPOLLIN;
 				ev.data.fd = connection_socket;
-				if (epoll_ctl(epollfd, EPOLL_CTL_ADD, connection_socket, &ev) == -1) {
-					DIE(true, "epoll_ctl: listen_sock failed");
-					exit(EXIT_FAILURE);
-				}
+				DIE(epoll_ctl(epollfd, EPOLL_CTL_ADD, connection_socket, &ev) == -1, "epoll_ctl: listen_sock failed");
 
 				/* Receive client struct */
 				subscriber client, tmp_client;
@@ -159,12 +122,12 @@ int Server::handler() {
 				if (already_connected) {
 					std::cout << "Client " << client.id << " already connected." << std::endl;
 					/* Send exit message to client and close connection */
-					send_message("exit", connection_socket, 4);
+					send_message(EXIT, connection_socket, 4);
 					close(connection_socket);
 					continue;
 				}
 
-				std::cout << "New client " << client.id << " connected from" << inet_ntoa(cli.sin_addr) << ":" << ntohs(cli.sin_port) << "." << std::endl;
+				std::cout << "New client " << client.id << " connected from " << inet_ntoa(cli.sin_addr) << ":" << ntohs(cli.sin_port) << "." << std::endl;
 				/* Add new client to subscribers */
 				if (status == false) {
 					client.socketfd = connection_socket;
@@ -179,14 +142,14 @@ int Server::handler() {
 				notification notif = notification();
 				struct sockaddr_in addr_udp;
 
-				int buflen = recvfrom(udp_sockfd, (char*) &notif, sizeof(notif), 0, (struct sockaddr *) &addr_udp, (socklen_t *) &addr_udp);
-				
+				int buflen = receive_udp_message((char*) &notif, addr_udp, sizeof(notif), udp_sockfd);
+
 				/* Send message to all subscribers */
 				for (auto &it : subscribers) {
 					if (it.second.get_connection_status() == true) {
 						for (auto &topic : it.second.get_topics()) {
 							if (strcmp(topic.name, notif.topic) == 0) {
-								send_message("notification", it.first.socketfd, 13);
+								send_message(NOTIFICATION, it.first.socketfd, 13);
 								send_message((char*) &notif, it.first.socketfd, sizeof(notif));
 								break;
 							}
@@ -217,7 +180,7 @@ int Server::handler() {
 				}
 
 				/* Check if message is exit */
-				if (strncmp(buffer, "exit", 4) == 0) {
+				if (strncmp(buffer, EXIT, 4) == 0) {
 					char client_id[10];
 					strncpy(client_id, buffer + 5, 10);
 
@@ -233,7 +196,7 @@ int Server::handler() {
 
 					/* Check if client was found */
 					if (found == false) {
-						std::cout << "Client " << client_id << " not found." << std::endl;
+						std::cerr << "Client " << client_id << " not found." << std::endl;
 						continue;
 					}
 					std::cout << "Client " << client_id << " disconnected." << std::endl;
@@ -241,7 +204,7 @@ int Server::handler() {
 				}
 
 				/* Check if message is subscribe */
-				if (strncmp(buffer, "subscribe", 9) == 0) {
+				if (strncmp(buffer, SUBSCRIBE, 9) == 0) {
 					char client_id[10];
 					char topic_name[50];
 					char sf[2];
@@ -261,14 +224,14 @@ int Server::handler() {
 
 					/* Check if client was found */
 					if (found == false) {
-						std::cout << "Client " << client_id << " not found." << std::endl;
+						std::cerr << "Client " << client_id << " not found." << std::endl;
 						continue;
 					}
 					continue;
 				}
 
 				/* Check if message is unsubscribe */
-				if (strncmp(buffer, "unsubscribe", 11) == 0) {
+				if (strncmp(buffer, UNSUBSCRIBE, 11) == 0) {
 					char client_id[10];
 					char topic_name[50];
 
@@ -287,7 +250,7 @@ int Server::handler() {
 
 					/* Check if client was found */
 					if (found == false) {
-						std::cout << "Client " << client_id << " not found." << std::endl;
+						std::cerr << "Client " << client_id << " not found." << std::endl;
 						continue;
 					}
 					continue;
@@ -313,7 +276,7 @@ int main(int argc, char *argv[]) {
 	int num_clients = 1;
 	int rc;
 
-	while (1) {
+	while (true) {
 		int rc = server.handler();
 		if (rc == -1) {
 			break;

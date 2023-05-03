@@ -1,5 +1,4 @@
 #include "helper.h"
-#include <math.h>
 
 void parse_notification(notification notif) {
 	int type = (int) notif.type;
@@ -9,10 +8,9 @@ void parse_notification(notification notif) {
 	switch (type) {
 		case INT:
 			std::cout << notif.topic << " - INT - ";
-			// first bit is sign
 			sign = (*(char*)notif.content) ? -1 : 1;
 			value = ntohl(*(uint32_t*) (notif.content + 1));
-			std::cout << (sign == -1 ? "-" : "") << value << std::endl;
+			std::cout << (sign == -1 ? "-" : EMPTY_STRING) << value << std::endl;
 			break;
 		case SHORT_REAL:
 			std::cout << notif.topic << " - SHORT_REAL - " << ntohs(*(uint16_t*) notif.content) /100 << ".";
@@ -24,12 +22,11 @@ void parse_notification(notification notif) {
 			break;
 		case FLOAT:
 			std::cout << notif.topic << " - FLOAT - ";
-			// first bit is sign
 			sign = (*(char*)notif.content) ? -1 : 1;
 			value = ntohl(*(uint32_t*) (notif.content + 1));
 			exponent = *(uint8_t*) (notif.content + 5);
 			power = pow(10, exponent);
-			std::cout << (sign == -1 ? "-" : "") << value / power << ".";
+			std::cout << (sign == -1 ? "-" : EMPTY_STRING) << value / power << ".";
 			value = value % power;
 			while (value < power / 10) {
 				std::cout << "0";
@@ -105,7 +102,7 @@ int main(int argc, char *argv[])
 				std::string command;
 				std::cin >> command;
 
-				if (command == "exit") {
+				if (command == EXIT) {
 					/* Send exit message to server */
 					char buffer[MAXLINE];
 					sprintf(buffer, "exit %s", argv[1]);
@@ -114,14 +111,14 @@ int main(int argc, char *argv[])
 					return 0;
 				}
 				// [TODO] subscribe and unsubscribe
-				if (command == "subscribe") {
+				if (command == SUBSCRIBE) {
 					std::string topic;
 					int sf;
 					std::cin >> topic >> sf;
 					client.subscribe(topic, sf, socketfd);
 					continue;
 				}
-				if (command == "unsubscribe") {
+				if (command == UNSUBSCRIBE) {
 					std::string topic;
 					std::cin >> topic;
 					client.unsubscribe(topic, socketfd);
@@ -141,13 +138,13 @@ int main(int argc, char *argv[])
 				}
 				
 				/* If the server is exiting */
-				if (strcmp(buffer, "exit") == 0) {
+				if (strcmp(buffer, EXIT) == 0) {
 					close(socketfd);
 					return 0;
 				}
 
 				/* If the server is sending a notification */
-				if (strcmp(buffer, "notification") == 0) {
+				if (strcmp(buffer, NOTIFICATION) == 0) {
 					notification notif;
 
 					/* Receive the notification */

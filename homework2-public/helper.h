@@ -1,27 +1,7 @@
 #ifndef _HELPER_H
 #define _HELPER_H 1
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/uio.h>
-#include <unistd.h>
-#include <sys/epoll.h> 
-#include <iostream>
-#include <memory>
-#include <bits/stdc++.h>
-
-
-#define MAXLINE 1024
-#define INT 0
-#define SHORT_REAL 1
-#define FLOAT 2
-#define STRING 3
+#include "defines.h"
 
 /*
  * Macro de verificare a erorilor
@@ -57,6 +37,15 @@ void send_message(char* message, int socketfd, int size);
  */
 int receive_message(char* message, int socketfd);
 
+/**
+ * @brief Receive a message from a UDP socket
+ * 
+ * @param message the message to be received
+ * @param addr_udp the address of the UDP sender
+ * @param addr_udp_len the length of the UDP sender address
+ * @param socketfd the socket to receive the message from
+ * @return int the size of the message
+ */
 int receive_udp_message(char* message, struct sockaddr_in &addr_udp, socklen_t addr_udp_len, int socketfd);
 
 struct subscriber {
@@ -73,30 +62,10 @@ struct subscriber {
 	}
 
 	subscriber() {
-		strcpy(this->id, "");
+		strcpy(this->id, EMPTY_STRING);
 		this->port = 0;
-		strcpy(this->ip, "");
+		strcpy(this->ip, EMPTY_STRING);
 		this->socketfd = -1;
-	}
-
-	bool operator==(const subscriber& other) const {
-		return (strcmp(this->id, other.id) == 0);
-	}
-
-	bool operator<(const subscriber& other) const {
-		return (this->id < other.id);
-	}
-
-	bool operator>(const subscriber& other) const {
-		return (this->id > other.id);
-	}
-
-	subscriber& operator=(const subscriber& other) {
-		strcpy(this->id, other.id);
-		this->port = other.port;
-		strcpy(this->ip, other.ip);
-		this->socketfd = other.socketfd;
-		return *this;
 	}
 
 	/* Send the subscriber id to the server */
@@ -107,11 +76,12 @@ struct subscriber {
 	/* Subscribe to a topic */
 	void subscribe(std::string topic, int sf, int socketfd) {
 		char message[100];
-		strcpy(message, "subscribe ");
+		strcpy(message, SUBSCRIBE);
+		strcat(message, SPACE_STRING);
 		strcat(message, this->id);
-		strcat(message, " ");
+		strcat(message, SPACE_STRING);
 		strcat(message, std::to_string(sf).c_str());
-		strcat(message, " ");
+		strcat(message, SPACE_STRING);
 		strcat(message, topic.c_str());
 		
 		send_message(message, socketfd, sizeof(message));
@@ -121,9 +91,10 @@ struct subscriber {
 	/* Unsubscribe from a topic */
 	void unsubscribe(std::string topic, int socketfd) {
 		char message[100];
-		strcpy(message, "unsubscribe ");
+		strcpy(message, UNSUBSCRIBE);
+		strcat(message, SPACE_STRING);
 		strcat(message, this->id);
-		strcat(message, " ");
+		strcat(message, SPACE_STRING);
 		strcat(message, topic.c_str());
 		send_message(message, socketfd, sizeof(message));
 		std::cout << "Unsubscribed from topic." << std::endl;
@@ -151,26 +122,6 @@ struct topic {
 	topic(char* name, int sf) {
 		strcpy(this->name, name);
 		this->sf = sf;
-	}
-
-	topic() {
-		strcpy(this->name, "");
-		this->sf = 0;
-	}
-
-	bool operator==(const topic& other) const {
-		return (strcmp(this->name, other.name) == 0);
-	}
-
-	topic& operator=(const topic& other) {
-		strcpy(this->name, other.name);
-		this->sf = other.sf;
-		return *this;
-	}
-
-	void send_register(int socketfd) {
-		// send the struct to the server
-		send_message((char*)this, socketfd, sizeof(topic));
 	}
 };
 
@@ -221,10 +172,11 @@ struct client_subscription {
 		}
 	}
 
+	/* Send all unread notifications to the client */
 	void send_notifications(int socketfd) {
 		while (!this->notifications.empty()) {
 			notification notif = this->notifications.front();
-			send_message("notification", socketfd, 13);
+			send_message(NOTIFICATION, socketfd, 13);
 			send_message((char*)&notif, socketfd, sizeof(notification));
 			this->notifications.pop();
 		}
