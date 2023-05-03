@@ -28,6 +28,12 @@ void init_udp_connection(Server *server) {
 		DIE(true, "bind failed");
 		exit(EXIT_FAILURE);
 	}
+
+	/* Add socket to epoll */
+	struct epoll_event ev;
+	ev.events = EPOLLIN;
+	ev.data.fd = server->udp_sockfd;
+	DIE(epoll_ctl(server->epollfd, EPOLL_CTL_ADD, server->udp_sockfd, &ev) < 0, "epoll_ctl");
 }
 
 void init_tcp_connection(Server *server) {
@@ -60,6 +66,7 @@ void init_tcp_connection(Server *server) {
 		exit(EXIT_FAILURE);
 	}
 
+	/* Add socket to epoll */
 	struct epoll_event ev;
 	ev.events = EPOLLIN;
 	ev.data.fd = server->tcp_sockfd;
@@ -130,17 +137,21 @@ int Server::handler() {
 				}
 
 				/* Receive client struct */
-				subscriber client;
+				subscriber client, tmp_client;
 				receive_message((char*) &client, connection_socket);
 				
 				/* Check if client is already connected */
 				bool already_connected = false;
 				bool status = false;
-				for (auto it : subscribers) {
-					if (strcmp(it.first.id, client.id) == 0 && it.second.first == true) {
-						status = it.second.first;
-						already_connected = true;
-						break;
+				for (auto &it : subscribers) {
+					if (strcmp(it.first.id, client.id) == 0) {
+						status = true;
+						if (it.second.first == true) {
+							already_connected = true;
+							break;
+						} else {
+							it.second.first = true;
+						}
 					}
 				}
 
@@ -154,7 +165,36 @@ int Server::handler() {
 
 				std::cout << "New client " << client.id << " connected from" << inet_ntoa(cli.sin_addr) << ":" << ntohs(cli.sin_port) << "." << std::endl;
 				/* Add new client to subscribers */
-				subscribers[client] = std::make_pair(true, std::vector<topic>());
+				if (status == false) {
+					client.socketfd = connection_socket;
+					subscribers[client] = std::make_pair(true, std::vector<topic>());
+				}
+				continue;
+			}
+
+			/* Reading new message from UDP socket */
+			if (events[i].data.fd == udp_sockfd) {
+				/* Receive message */
+				notification notif = notification();
+				struct sockaddr_in addr_udp;
+
+				int buflen = recvfrom(udp_sockfd, (char*) &notif, sizeof(notif), 0, (struct sockaddr *) &addr_udp, (socklen_t *) &addr_udp);
+				
+				/* Send message to all subscribers */
+				for (auto &it : subscribers) {
+					if (it.second.first == true) {
+						for (auto &topic : it.second.second) {
+							if (strcmp(topic.name, notif.topic) == 0) {
+								send_message("notification", it.first.socketfd, 13);
+								send_message((char*) &notif, it.first.socketfd, sizeof(notif));
+								break;
+							}
+						}
+					} else if (it.second.first == true) {
+						/* TODO: send message to offline clients */
+					}
+				}
+
 				continue;
 			}
 
@@ -192,7 +232,66 @@ int Server::handler() {
 					std::cout << "Client " << client_id << " disconnected." << std::endl;
 					continue;
 				}
+
+				/* Check if message is subscribe */
+				if (strncmp(buffer, "subscribe", 9) == 0) {
+					char client_id[10];
+					char topic_name[50];
+					char sf[2];
+
+					/* Parse message */
+					sscanf(buffer + 10, "%s %s %s", client_id, sf, topic_name);
+
+					/* Add topic to client */
+					bool found = false;
+					for (auto &it : subscribers) {
+						if (strcmp(it.first.id, client_id) == 0) {
+							found = true;
+							it.second.second.push_back(topic(topic_name, atoi(sf)));
+							break;
+						}
+					}
+
+					/* Check if client was found */
+					if (found == false) {
+						std::cout << "Client " << client_id << " not found." << std::endl;
+						continue;
+					}
+					continue;
+				}
+
+				/* Check if message is unsubscribe */
+				if (strncmp(buffer, "unsubscribe", 11) == 0) {
+					char client_id[10];
+					char topic_name[50];
+
+					/* Parse message */
+					sscanf(buffer + 12, "%s %s", client_id, topic_name);
+
+					/* Remove topic from client */
+					bool found = false;
+					for (auto &it : subscribers) {
+						if (strcmp(it.first.id, client_id) == 0) {
+							found = true;
+							for (auto it2 = it.second.second.begin(); it2 != it.second.second.end(); ++it2) {
+								if (strcmp(it2->name, topic_name) == 0) {
+									it.second.second.erase(it2);
+									break;
+								}
+							}
+							break;
+						}
+					}
+
+					/* Check if client was found */
+					if (found == false) {
+						std::cout << "Client " << client_id << " not found." << std::endl;
+						continue;
+					}
+					continue;
+				}
 			}
+
 		}
 	}
 	return 0;

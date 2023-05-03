@@ -1,4 +1,49 @@
 #include "helper.h"
+#include <math.h>
+
+void parse_notification(notification notif) {
+	int type = (int) notif.type;
+	long long sign, value, power;
+	uint8_t exponent;
+
+	switch (type) {
+		case INT:
+			std::cout << notif.topic << " - INT - ";
+			// first bit is sign
+			sign = (*(char*)notif.content) ? -1 : 1;
+			value = ntohl(*(uint32_t*) (notif.content + 1));
+			std::cout << (sign == -1 ? "-" : "") << value << std::endl;
+			break;
+		case SHORT_REAL:
+			std::cout << notif.topic << " - SHORT_REAL - " << ntohs(*(uint16_t*) notif.content) /100 << ".";
+			value = ntohs(*(uint16_t*) notif.content) % 100;
+			if (value < 10) {
+				std::cout << "0";
+			}
+			std::cout << value << std::endl;
+			break;
+		case FLOAT:
+			std::cout << notif.topic << " - FLOAT - ";
+			// first bit is sign
+			sign = (*(char*)notif.content) ? -1 : 1;
+			value = ntohl(*(uint32_t*) (notif.content + 1));
+			exponent = *(uint8_t*) (notif.content + 5);
+			power = pow(10, exponent);
+			std::cout << (sign == -1 ? "-" : "") << value / power << ".";
+			value = value % power;
+			while (value < power / 10) {
+				std::cout << "0";
+				power /= 10;
+			}
+			std::cout << value << std::endl;
+			break;
+		case STRING:
+			std::cout << notif.topic << " - STRING - " << notif.content << std::endl;
+			break;
+		default:
+			break;
+	}
+}
 
 int main(int argc, char *argv[])
 {
@@ -69,6 +114,20 @@ int main(int argc, char *argv[])
 					return 0;
 				}
 				// [TODO] subscribe and unsubscribe
+				if (command == "subscribe") {
+					std::string topic;
+					int sf;
+					std::cin >> topic >> sf;
+					client.subscribe(topic, sf, socketfd);
+					continue;
+				}
+				if (command == "unsubscribe") {
+					std::string topic;
+					std::cin >> topic;
+					client.unsubscribe(topic, socketfd);
+					continue;
+				}
+				printf("[TCP CLIENT] Invalid command\n");
 				continue;
 			}			
 			/* If socket is ready to read */
@@ -85,6 +144,17 @@ int main(int argc, char *argv[])
 				if (strcmp(buffer, "exit") == 0) {
 					close(socketfd);
 					return 0;
+				}
+
+				/* If the server is sending a notification */
+				if (strcmp(buffer, "notification") == 0) {
+					notification notif;
+
+					/* Receive the notification */
+					receive_message((char*) &notif, socketfd);
+					/* Print the notification */
+					parse_notification(notif);
+					continue;
 				}
 			}
 		}

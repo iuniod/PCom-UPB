@@ -13,10 +13,14 @@
 #include <unistd.h>
 #include <sys/epoll.h> 
 #include <iostream>
-
+#include <memory>
 
 
 #define MAXLINE 1024
+#define INT 0
+#define SHORT_REAL 1
+#define FLOAT 2
+#define STRING 3
 
 /*
  * Macro de verificare a erorilor
@@ -51,6 +55,8 @@ void send_message(char* message, int socketfd, int size);
  * @return int the size of the message
  */
 int receive_message(char* message, int socketfd);
+
+int receive_udp_message(char* message, struct sockaddr_in &addr_udp, socklen_t addr_udp_len, int socketfd);
 
 struct subscriber {
 	char id[10];
@@ -96,6 +102,31 @@ struct subscriber {
 	void send_register(int socketfd) {
 		send_message(this->id, socketfd, sizeof(this->id));
 	}
+
+	/* Subscribe to a topic */
+	void subscribe(std::string topic, int sf, int socketfd) {
+		char message[100];
+		strcpy(message, "subscribe ");
+		strcat(message, this->id);
+		strcat(message, " ");
+		strcat(message, std::to_string(sf).c_str());
+		strcat(message, " ");
+		strcat(message, topic.c_str());
+		
+		send_message(message, socketfd, sizeof(message));
+		std::cout << "Subscribed to topic." << std::endl;
+	}
+
+	/* Unsubscribe from a topic */
+	void unsubscribe(std::string topic, int socketfd) {
+		char message[100];
+		strcpy(message, "unsubscribe ");
+		strcat(message, this->id);
+		strcat(message, " ");
+		strcat(message, topic.c_str());
+		send_message(message, socketfd, sizeof(message));
+		std::cout << "Unsubscribed from topic." << std::endl;
+	}
 };
 
 /* Hash function for unordered_map */
@@ -140,6 +171,18 @@ struct topic {
 		// send the struct to the server
 		send_message((char*)this, socketfd, sizeof(topic));
 	}
+};
+
+struct notification {
+	char topic[50];
+	uint8_t type;
+	char content[1500];
+};
+
+struct client_subscription {
+	bool is_connected;
+	std::vector<topic> topics;
+	std::queue<notification> notifications;
 };
 
 #endif  // _HELPER_H

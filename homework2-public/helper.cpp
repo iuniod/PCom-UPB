@@ -45,3 +45,13 @@ int receive_message(char* message, int socketfd) {
 
 	return bytes_received;
 }
+
+int receive_udp_message(char* message, struct sockaddr_in &addr_udp, socklen_t addr_udp_len, int socketfd) {
+	int bytes = recvfrom(socketfd, message, addr_udp_len, 0, (struct sockaddr*) &addr_udp, &addr_udp_len);
+	if (!bytes) {
+		return 0;
+	}
+	DIE(bytes < 0, "recv");
+
+	return bytes;
+}
