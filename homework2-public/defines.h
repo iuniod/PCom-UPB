@@ -34,5 +34,7 @@
 #define EXIT "exit"
 #define NOTIFICATION "notification"
 
+#define INVALID_COMMAND "Invalid command.\n"
+
 
 #endif  // DEFINES_H_

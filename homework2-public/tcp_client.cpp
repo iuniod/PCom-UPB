@@ -1,5 +1,44 @@
 #include "helper.h"
 
+void print_INT(char* topic, char* content) {
+	long long sign = (*(char*) content) ? -1 : 1;
+	long long value = ntohl(*(uint32_t*) ( content + 1));
+
+	std::cout << topic << " - INT - " << (sign == -1 ? "-" : EMPTY_STRING) << value << std::endl;
+}
+
+void print_SHORT_REAL(char* topic, char* content) {
+	std::cout << topic << " - SHORT_REAL - " << ntohs(*(uint16_t*) content) /100 << ".";
+
+	long long value = ntohs(*(uint16_t*) content) % 100;
+
+	if (value < 10) {
+		std::cout << "0";
+	}
+	std::cout << value << std::endl;
+}
+
+void print_FLOAT(char* topic, char* content) {
+	long long sign = (*(char*) content) ? -1 : 1;
+	long long value = ntohl(*(uint32_t*) (content + 1));
+	uint8_t exponent = *(uint8_t*) (content + 5);
+	long long power = pow(10, exponent);
+
+	std::cout << topic << " - FLOAT - " << (sign == -1 ? "-" : EMPTY_STRING) << value / power << ".";
+
+	value = value % power;
+	while (value < power / 10) {
+		std::cout << "0";
+		power /= 10;
+	}
+
+	std::cout << value << std::endl;
+}
+
+void print_STRING(char* topic, char* content) {
+	std::cout << topic << " - STRING - " << content << std::endl;
+}
+
 void parse_notification(notification notif) {
 	int type = (int) notif.type;
 	long long sign, value, power;
@@ -7,43 +46,81 @@ void parse_notification(notification notif) {
 
 	switch (type) {
 		case INT:
-			std::cout << notif.topic << " - INT - ";
-			sign = (*(char*)notif.content) ? -1 : 1;
-			value = ntohl(*(uint32_t*) (notif.content + 1));
-			std::cout << (sign == -1 ? "-" : EMPTY_STRING) << value << std::endl;
+			print_INT(notif.topic, notif.content);
 			break;
 		case SHORT_REAL:
-			std::cout << notif.topic << " - SHORT_REAL - " << ntohs(*(uint16_t*) notif.content) /100 << ".";
-			value = ntohs(*(uint16_t*) notif.content) % 100;
-			if (value < 10) {
-				std::cout << "0";
-			}
-			std::cout << value << std::endl;
+			print_SHORT_REAL(notif.topic, notif.content);
 			break;
 		case FLOAT:
-			std::cout << notif.topic << " - FLOAT - ";
-			sign = (*(char*)notif.content) ? -1 : 1;
-			value = ntohl(*(uint32_t*) (notif.content + 1));
-			exponent = *(uint8_t*) (notif.content + 5);
-			power = pow(10, exponent);
-			std::cout << (sign == -1 ? "-" : EMPTY_STRING) << value / power << ".";
-			value = value % power;
-			while (value < power / 10) {
-				std::cout << "0";
-				power /= 10;
-			}
-			std::cout << value << std::endl;
+			print_FLOAT(notif.topic, notif.content);
 			break;
 		case STRING:
-			std::cout << notif.topic << " - STRING - " << notif.content << std::endl;
+			print_STRING(notif.topic, notif.content);
 			break;
 		default:
 			break;
 	}
 }
 
-int main(int argc, char *argv[])
-{
+void handle_stdin_message(subscriber &client, int socketfd) {
+	std::string command;
+	std::cin >> command;
+
+	if (command == EXIT) {
+		/* Send exit message to server */
+		char buffer[MAXLINE];
+		sprintf(buffer, "exit %s", client.id);
+		send_message(buffer, socketfd, strlen(buffer) + 1);
+		close(socketfd);
+		exit(EXIT_SUCCESS);
+	}
+
+	if (command == SUBSCRIBE) {
+		std::string topic;
+		int sf;
+		std::cin >> topic >> sf;
+		client.subscribe(topic, sf, socketfd);
+		return;
+	}
+
+	if (command == UNSUBSCRIBE) {
+		std::string topic;
+		std::cin >> topic;
+		client.unsubscribe(topic, socketfd);
+		return;
+	}
+
+	std::cerr << INVALID_COMMAND;
+}
+
+void handle_server_message(int socketfd) {
+	/* Receive message from server */
+	char buffer[MAXLINE];
+	int n = receive_message(buffer, socketfd);
+	if (n == 0) {
+		close(socketfd);
+		exit(EXIT_SUCCESS);
+	}
+	
+	/* If the server is exiting */
+	if (strcmp(buffer, EXIT) == 0) {
+		close(socketfd);
+		exit(EXIT_SUCCESS);
+	}
+
+	/* If the server is sending a notification */
+	if (strcmp(buffer, NOTIFICATION) == 0) {
+		notification notif;
+
+		/* Receive the notification */
+		receive_message((char*) &notif, socketfd);
+		/* Print the notification */
+		parse_notification(notif);
+		return;
+	}
+}
+
+int main(int argc, char *argv[]) {
 	int socketfd;
 	struct sockaddr_in server_addr;
 
@@ -58,10 +135,7 @@ int main(int argc, char *argv[])
 	memset(&server_addr, 0, sizeof(server_addr));
 	
 	/* Create socket, we use SOCK_STREAM for TCP */
-	if ((socketfd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-		printf("[CLIENT] Could not create socket\n");
-		return -1;
-	}
+	DIE((socketfd = socket(AF_INET, SOCK_STREAM, 0)) < 0, "socket");
 	
 	/* Set port and IP the same as server-side */
 	server_addr.sin_family = AF_INET;
@@ -69,10 +143,7 @@ int main(int argc, char *argv[])
 	server_addr.sin_addr.s_addr = inet_addr(argv[2]);
 	
 	/* Send connection request to server */
-	if(connect(socketfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0){
-		printf("[CLIENT] Unable to connect\n");
-		return -1;
-	}
+	DIE(connect(socketfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0, "connect");
 
 	/* Send message to server */
 	subscriber client(argv[1], atoi(argv[3]), argv[2], socketfd);
@@ -82,77 +153,27 @@ int main(int argc, char *argv[])
 	DIE(epollfd < 0, "epoll_create1");
 
 	/* Add STDIN to epoll */
-	struct epoll_event event;
-	event.data.fd = STDIN_FILENO;
-	event.events = EPOLLIN;
-	DIE(epoll_ctl(epollfd, EPOLL_CTL_ADD, STDIN_FILENO, &event) < 0, "epoll_ctl");
+	add_connection_to_epoll(STDIN_FILENO, epollfd);
 
 	/* Add socket to epoll */
-	event.data.fd = socketfd;
-	event.events = EPOLLIN;
-	DIE(epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0, "epoll_ctl");
+	add_connection_to_epoll(socketfd, epollfd);
 
 	while (true) {
-		for ( ; ; ) {
+		while (true) {
+			struct epoll_event event;
 			int n = epoll_wait(epollfd, &event, 1, -1);
 			DIE(n < 0, "epoll_wait");
 
 			/* If STDIN is ready to read */
 			if (event.data.fd == STDIN_FILENO) {
-				std::string command;
-				std::cin >> command;
-
-				if (command == EXIT) {
-					/* Send exit message to server */
-					char buffer[MAXLINE];
-					sprintf(buffer, "exit %s", argv[1]);
-					send_message(buffer, socketfd, strlen(buffer) + 1);
-					close(socketfd);
-					return 0;
-				}
-				// [TODO] subscribe and unsubscribe
-				if (command == SUBSCRIBE) {
-					std::string topic;
-					int sf;
-					std::cin >> topic >> sf;
-					client.subscribe(topic, sf, socketfd);
-					continue;
-				}
-				if (command == UNSUBSCRIBE) {
-					std::string topic;
-					std::cin >> topic;
-					client.unsubscribe(topic, socketfd);
-					continue;
-				}
-				printf("[TCP CLIENT] Invalid command\n");
+				handle_stdin_message(client, socketfd);
 				continue;
-			}			
+			}
+		
 			/* If socket is ready to read */
 			if (event.data.fd == socketfd) {
-				/* Receive message from server */
-				char buffer[MAXLINE];
-				int n = receive_message(buffer, socketfd);
-				if (n == 0) {
-					close(socketfd);
-					return 0;
-				}
-				
-				/* If the server is exiting */
-				if (strcmp(buffer, EXIT) == 0) {
-					close(socketfd);
-					return 0;
-				}
-
-				/* If the server is sending a notification */
-				if (strcmp(buffer, NOTIFICATION) == 0) {
-					notification notif;
-
-					/* Receive the notification */
-					receive_message((char*) &notif, socketfd);
-					/* Print the notification */
-					parse_notification(notif);
-					continue;
-				}
+				handle_server_message(socketfd);
+				continue;
 			}
 		}
 	}	

@@ -1,5 +1,5 @@
 #ifndef _HELPER_H
-#define _HELPER_H 1
+#define _HELPER_H
 
 #include "defines.h"
 
@@ -47,6 +47,14 @@ int receive_message(char* message, int socketfd);
  * @return int the size of the message
  */
 int receive_udp_message(char* message, struct sockaddr_in &addr_udp, socklen_t addr_udp_len, int socketfd);
+
+/**
+ * @brief Add a connection to the epoll
+ * 
+ * @param fd the file descriptor of the connection
+ * @param epollfd the epoll file descriptor
+ */
+void add_connection_to_epoll(int fd, int epollfd);
 
 struct subscriber {
 	char id[10];

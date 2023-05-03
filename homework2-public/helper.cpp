@@ -55,3 +55,10 @@ int receive_udp_message(char* message, struct sockaddr_in &addr_udp, socklen_t a
 
 	return bytes;
 }
+
+void add_connection_to_epoll(int fd, int epollfd) {
+	struct epoll_event ev;
+	ev.events = EPOLLIN;
+	ev.data.fd = fd;
+	DIE(epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ev) == -1, "epoll_ctl: listen_sock failed");
+}
