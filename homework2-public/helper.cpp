@@ -1,6 +1,6 @@
 #include "helper.h"
 
-void send_message(char* message, int socketfd, int size) {
+void send_message(int socketfd, char* message, int size) {
 	int bytes_send = 0;
 
 	/* Send the size of the message */
@@ -19,7 +19,7 @@ void send_message(char* message, int socketfd, int size) {
 	}
 }
 
-int receive_message(char* message, int socketfd) {
+int receive_message(int socketfd, char* message) {
 	int bytes_received = 0;
 	int size;
 
@@ -46,7 +46,7 @@ int receive_message(char* message, int socketfd) {
 	return bytes_received;
 }
 
-int receive_udp_message(char* message, struct sockaddr_in &addr_udp, socklen_t addr_udp_len, int socketfd) {
+int receive_udp_message(int socketfd, char* message, struct sockaddr_in &addr_udp, socklen_t addr_udp_len) {
 	int bytes = recvfrom(socketfd, message, addr_udp_len, 0, (struct sockaddr*) &addr_udp, &addr_udp_len);
 	if (!bytes) {
 		return 0;

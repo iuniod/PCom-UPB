@@ -40,11 +40,10 @@ void print_STRING(char* topic, char* content) {
 }
 
 void parse_notification(notification notif) {
-	int type = (int) notif.type;
 	long long sign, value, power;
 	uint8_t exponent;
 
-	switch (type) {
+	switch ((int) notif.type) {
 		case INT:
 			print_INT(notif.topic, notif.content);
 			break;
@@ -70,7 +69,7 @@ void handle_stdin_message(subscriber &client, int socketfd) {
 		/* Send exit message to server */
 		char buffer[MAXLINE];
 		sprintf(buffer, "exit %s", client.id);
-		send_message(buffer, socketfd, strlen(buffer) + 1);
+		send_message(socketfd, buffer, strlen(buffer) + 1);
 		close(socketfd);
 		exit(EXIT_SUCCESS);
 	}
@@ -96,7 +95,7 @@ void handle_stdin_message(subscriber &client, int socketfd) {
 void handle_server_message(int socketfd) {
 	/* Receive message from server */
 	char buffer[MAXLINE];
-	int n = receive_message(buffer, socketfd);
+	int n = receive_message(socketfd, buffer);
 	if (n == 0) {
 		close(socketfd);
 		exit(EXIT_SUCCESS);
@@ -113,7 +112,7 @@ void handle_server_message(int socketfd) {
 		notification notif;
 
 		/* Receive the notification */
-		receive_message((char*) &notif, socketfd);
+		receive_message(socketfd, (char*) &notif);
 		/* Print the notification */
 		parse_notification(notif);
 		return;

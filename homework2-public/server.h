@@ -23,7 +23,7 @@ struct Server {
 		/* Send exit message to all subscribers that are connected */
 		for (auto& sub : subscribers) {
 			if (sub.second.get_connection_status() == true) {
-				send_message(EXIT, sub.first.socketfd, 4);
+				send_message(sub.first.socketfd, EXIT, 4);
 				close(sub.first.socketfd);
 			}
 		}
@@ -68,7 +68,7 @@ struct Server {
 
 		/* Receive client struct */
 		subscriber client, tmp_client;
-		receive_message((char*) &client, connection_socket);
+		receive_message(connection_socket, (char*) &client);
 		
 		/* Check if client is already connected */
 		bool already_connected = false;
@@ -90,7 +90,7 @@ struct Server {
 		if (already_connected) {
 			std::cout << "Client " << client.id << " already connected." << std::endl;
 			/* Send exit message to client and close connection */
-			send_message(EXIT, connection_socket, 4);
+			send_message(connection_socket, EXIT, 4);
 			close(connection_socket);
 			return;
 		}
@@ -109,15 +109,15 @@ struct Server {
 		notification notif = notification();
 		struct sockaddr_in addr_udp;
 
-		int buflen = receive_udp_message((char*) &notif, addr_udp, sizeof(notif), udp_sockfd);
+		int buflen = receive_udp_message(udp_sockfd, (char*) &notif, addr_udp, sizeof(notif));
 
 		/* Send message to all subscribers */
 		for (auto &it : subscribers) {
 			if (it.second.get_connection_status() == true) {
 				for (auto &topic : it.second.get_topics()) {
 					if (strcmp(topic.name, notif.topic) == 0) {
-						send_message(NOTIFICATION, it.first.socketfd, 13);
-						send_message((char*) &notif, it.first.socketfd, sizeof(notif));
+						send_message(it.first.socketfd, NOTIFICATION, 13);
+						send_message(it.first.socketfd, (char*) &notif, sizeof(notif));
 						break;
 					}
 				}
@@ -138,7 +138,7 @@ struct Server {
 		char buffer[MAXLINE];
 
 		/* Receive message */
-		int n = receive_message(buffer, event.data.fd);
+		int n = receive_message(event.data.fd, buffer);
 		if (n == 0) {
 			close(event.data.fd);
 			return;

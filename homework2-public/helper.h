@@ -26,7 +26,7 @@
  * @param socketfd the socket to send the message to
  * @param size the size of the message
  */
-void send_message(char* message, int socketfd, int size);
+void send_message(int socketfd, char* message, int size);
 
 /**
  * @brief Receive a message from a socket
@@ -35,7 +35,7 @@ void send_message(char* message, int socketfd, int size);
  * @param socketfd the socket to receive the message from
  * @return int the size of the message
  */
-int receive_message(char* message, int socketfd);
+int receive_message(int socketfd, char* message);
 
 /**
  * @brief Receive a message from a UDP socket
@@ -46,7 +46,7 @@ int receive_message(char* message, int socketfd);
  * @param socketfd the socket to receive the message from
  * @return int the size of the message
  */
-int receive_udp_message(char* message, struct sockaddr_in &addr_udp, socklen_t addr_udp_len, int socketfd);
+int receive_udp_message(int socketfd, char* message, struct sockaddr_in &addr_udp, socklen_t addr_udp_len);
 
 /**
  * @brief Add a connection to the epoll
@@ -78,7 +78,7 @@ struct subscriber {
 
 	/* Send the subscriber id to the server */
 	void send_register(int socketfd) {
-		send_message(this->id, socketfd, sizeof(this->id));
+		send_message(socketfd, this->id, sizeof(this->id));
 	}
 
 	/* Subscribe to a topic */
@@ -92,7 +92,7 @@ struct subscriber {
 		strcat(message, SPACE_STRING);
 		strcat(message, topic.c_str());
 		
-		send_message(message, socketfd, sizeof(message));
+		send_message(socketfd, message, sizeof(message));
 		std::cout << "Subscribed to topic." << std::endl;
 	}
 
@@ -104,7 +104,7 @@ struct subscriber {
 		strcat(message, this->id);
 		strcat(message, SPACE_STRING);
 		strcat(message, topic.c_str());
-		send_message(message, socketfd, sizeof(message));
+		send_message(socketfd, message, sizeof(message));
 		std::cout << "Unsubscribed from topic." << std::endl;
 	}
 };
@@ -184,8 +184,8 @@ struct client_subscription {
 	void send_notifications(int socketfd) {
 		while (!this->notifications.empty()) {
 			notification notif = this->notifications.front();
-			send_message(NOTIFICATION, socketfd, 13);
-			send_message((char*)&notif, socketfd, sizeof(notification));
+			send_message(socketfd, NOTIFICATION, 13);
+			send_message(socketfd, (char*)&notif, sizeof(notification));
 			this->notifications.pop();
 		}
 	}
