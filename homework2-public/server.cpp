@@ -28,7 +28,11 @@ void init_tcp_connection(Server *server) {
 
 	/* Make ports reusable, in case we run this really fast two times in a row */
 	int enable = 1;
-	DIE(setsockopt(server->tcp_sockfd, SOL_SOCKET, SO_REUSEPORT, &enable, sizeof(int)) < 0, "setsockopt(SO_REUSEPORT) failed");
+	DIE(setsockopt(server->tcp_sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0, "setsockopt(SO_REUSEADDR) failed");
+
+	/* Disable Nagle's algorithm */
+	int flag = 1;
+	DIE(setsockopt(server->tcp_sockfd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int)) < 0, "setsockopt(TCP_NODELAY) failed");
 
 	/* Filling server information */
 	struct sockaddr_in server_addr;

@@ -8,6 +8,7 @@
 #include <math.h>
 #include <memory>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +33,6 @@
 #define SUBSCRIBE "subscribe"
 #define UNSUBSCRIBE "unsubscribe"
 #define EXIT "exit"
-#define NOTIFICATION "notification"
 
 #define INVALID_COMMAND "Invalid command.\n"
 

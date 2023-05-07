@@ -94,29 +94,17 @@ void handle_stdin_message(subscriber &client, int socketfd) {
 
 void handle_server_message(int socketfd) {
 	/* Receive message from server */
-	char buffer[MAXLINE];
-	int n = receive_message(socketfd, buffer);
+	notification notif;
+	int n = receive_message(socketfd, (char*) &notif);
+
+	/* If the server has closed the connection */
 	if (n == 0) {
 		close(socketfd);
 		exit(EXIT_SUCCESS);
 	}
-	
-	/* If the server is exiting */
-	if (strcmp(buffer, EXIT) == 0) {
-		close(socketfd);
-		exit(EXIT_SUCCESS);
-	}
 
-	/* If the server is sending a notification */
-	if (strcmp(buffer, NOTIFICATION) == 0) {
-		notification notif;
-
-		/* Receive the notification */
-		receive_message(socketfd, (char*) &notif);
-		/* Print the notification */
-		parse_notification(notif);
-		return;
-	}
+	/* If the server has sent a notification */
+	parse_notification(notif);
 }
 
 int main(int argc, char *argv[]) {
@@ -135,6 +123,14 @@ int main(int argc, char *argv[]) {
 	
 	/* Create socket, we use SOCK_STREAM for TCP */
 	DIE((socketfd = socket(AF_INET, SOCK_STREAM, 0)) < 0, "socket");
+
+	/* Make ports reusable, in case we run this really fast two times in a row */
+	int enable = 1;
+	DIE(setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0, "setsockopt(SO_REUSEADDR) failed");
+
+	/* Disable Nagle's algorithm */
+	int flag = 1;
+	DIE(setsockopt(socketfd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(int)) < 0, "setsockopt(TCP_NODELAY) failed");
 	
 	/* Set port and IP the same as server-side */
 	server_addr.sin_family = AF_INET;

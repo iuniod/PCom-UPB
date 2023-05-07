@@ -116,7 +116,6 @@ struct Server {
 			if (it.second.get_connection_status() == true) {
 				for (auto &topic : it.second.get_topics()) {
 					if (strcmp(topic.name, notif.topic) == 0) {
-						send_message(it.first.socketfd, NOTIFICATION, 13);
 						send_message(it.first.socketfd, (char*) &notif, sizeof(notif));
 						break;
 					}

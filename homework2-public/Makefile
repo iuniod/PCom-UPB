@@ -1,7 +1,3 @@
-# Protocoale de comunicatii:
-# Laborator 8: Multiplexare
-# Makefile
-
 CC = g++
 CFLAGS = -w -Wall
 

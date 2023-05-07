@@ -184,7 +184,6 @@ struct client_subscription {
 	void send_notifications(int socketfd) {
 		while (!this->notifications.empty()) {
 			notification notif = this->notifications.front();
-			send_message(socketfd, NOTIFICATION, 13);
 			send_message(socketfd, (char*)&notif, sizeof(notification));
 			this->notifications.pop();
 		}
