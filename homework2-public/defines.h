@@ -3,21 +3,13 @@
 
 #include <arpa/inet.h>
 #include <bits/stdc++.h>
-#include <errno.h>
-#include <iostream>
-#include <math.h>
-#include <memory>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <poll.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/uio.h>
-#include <unistd.h>
 
 
 #define MAX_CONNECTIONS 1024
@@ -35,6 +27,15 @@
 #define EXIT "exit"
 
 #define INVALID_COMMAND "Invalid command.\n"
+
+#define DIE(assertion, call_description)                                       \
+	do {                                                                         \
+		if (assertion) {                                                           \
+			fprintf(stderr, "(%s, %d): ", __FILE__, __LINE__);                       \
+			perror(call_description);                                                \
+			exit(EXIT_FAILURE);                                                      \
+		}                                                                          \
+	} while (0)
 
 
 #endif  // DEFINES_H_

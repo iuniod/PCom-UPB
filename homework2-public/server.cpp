@@ -109,10 +109,6 @@ int main(int argc, char *argv[]) {
 
 	Server server(atoi(argv[1]));
 
-	std::vector<struct pollfd> poll_fds;
-	int num_clients = 1;
-	int rc;
-
 	while (true) {
 		int rc = server.handler();
 		if (rc == -1) {

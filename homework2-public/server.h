@@ -3,8 +3,9 @@
 
 #include "helper.h"
 
-
+/* Structure for the server */
 struct Server {
+	/* Internal variables */
 	struct sockaddr_in udp_socket;
 	int udp_sockfd;
 	int tcp_sockfd;
@@ -14,16 +15,17 @@ struct Server {
 	struct epoll_event events[MAX_CONNECTIONS];
 	std::unordered_map<subscriber, client_subscription, hash, equal_to> subscribers;
 
+	/* Constructor */
 	Server(int port) {
 		this->port = port;
 		init_server(port);
 	}
 
+	/* Destructor */
 	~Server() {
 		/* Send exit message to all subscribers that are connected */
 		for (auto& sub : subscribers) {
 			if (sub.second.get_connection_status() == true) {
-				send_message(sub.first.socketfd, EXIT, 4);
 				close(sub.first.socketfd);
 			}
 		}
@@ -35,9 +37,6 @@ struct Server {
 
 	/* Initialize server */
 	void init_server(int port);
-
-	/* Accept new connection */
-	int accept_connection();
 
 	/* Handle message from TCP & UDP sockets */
 	int handler();
@@ -51,7 +50,7 @@ struct Server {
 			return -1;
 		}
 
-		fprintf(stderr, INVALID_COMMAND);
+		std::cerr << INVALID_COMMAND;
 		return 0;
 	}
 
@@ -73,24 +72,21 @@ struct Server {
 		/* Check if client is already connected */
 		bool already_connected = false;
 		bool status = false;
-		for (auto &it : subscribers) {
-			if (strcmp(it.first.id, client.id) == 0) {
-				status = true;
-				if (it.second.get_connection_status() == true) {
-					already_connected = true;
-					break;
-				} else {
-					/* Client is already subscribed, but not connected - wake him up */
-					it.second.set_connection_status(true);
-					it.second.send_notifications(it.first.socketfd);
-				}
+		auto it = get_client(client.id);
+		if (it != subscribers.end()) {
+			status = true;
+			if (it->second.get_connection_status() == true) {
+				already_connected = true;
+			} else {
+				/* Client is already subscribed, but not connected - wake him up */
+				it->second.set_connection_status(true);
+				it->second.send_notifications(it->first.socketfd);
 			}
 		}
 
 		if (already_connected) {
 			std::cout << "Client " << client.id << " already connected." << std::endl;
 			/* Send exit message to client and close connection */
-			send_message(connection_socket, EXIT, 4);
 			close(connection_socket);
 			return;
 		}
@@ -120,7 +116,7 @@ struct Server {
 						break;
 					}
 				}
-			} else if (it.second.get_connection_status() == false) {
+			} else {
 				/* Send message to offline clients */
 				for (auto &topic : it.second.get_topics()) {
 					if (strcmp(topic.name, notif.topic) == 0 && topic.sf == 1) {
@@ -149,20 +145,14 @@ struct Server {
 			strncpy(client_id, buffer + 5, 10);
 
 			/* Set client status to false - disconnected */
-			bool found = false;
-			for (auto &it : subscribers) {
-				if (strcmp(it.first.id, client_id) == 0) {
-					it.second.set_connection_status(false);
-					found = true;
-					break;
-				}
-			}
-
-			/* Check if client was found */
-			if (found == false) {
+			auto it = get_client(client_id);
+			if (it == subscribers.end()) {
 				std::cerr << "Client " << client_id << " not found." << std::endl;
 				return;
 			}
+
+			it->second.set_connection_status(false);
+
 			std::cout << "Client " << client_id << " disconnected." << std::endl;
 			return;
 		}
@@ -177,20 +167,13 @@ struct Server {
 			sscanf(buffer + 10, "%s %s %s", client_id, sf, topic_name);
 
 			/* Add topic to client */
-			bool found = false;
-			for (auto &it : subscribers) {
-				if (strcmp(it.first.id, client_id) == 0) {
-					found = true;
-					it.second.add_topic(topic(topic_name, atoi(sf)));
-					break;
-				}
-			}
-
-			/* Check if client was found */
-			if (found == false) {
+			auto it = get_client(client_id);
+			if (it == subscribers.end()) {
 				std::cerr << "Client " << client_id << " not found." << std::endl;
 				return;
 			}
+			
+			it->second.add_topic(topic(topic_name, atoi(sf)));
 
 			return;
 		}
@@ -204,22 +187,25 @@ struct Server {
 			sscanf(buffer + 12, "%s %s", client_id, topic_name);
 
 			/* Remove topic from client */
-			bool found = false;
-			for (auto &it : subscribers) {
-				if (strcmp(it.first.id, client_id) == 0) {
-					found = true;
-					it.second.remove_topic(topic_name);
-					break;
-				}
-			}
-
-			/* Check if client was found */
-			if (found == false) {
+			auto it = get_client(client_id);
+			if (it == subscribers.end()) {
 				std::cerr << "Client " << client_id << " not found." << std::endl;
 				return;
 			}
+			
+			it->second.remove_topic(topic_name);
 			return;
 		}
+	}
+
+	/* Get a specific client */
+	std::unordered_map<subscriber, client_subscription, hash, equal_to>::iterator get_client(char* client_id) {
+		for (auto it = subscribers.begin(); it != subscribers.end(); ++it) {
+			if (strcmp(it->first.id, client_id) == 0) {
+				return it;
+			}
+		}
+		return subscribers.end();
 	}
 };
 
