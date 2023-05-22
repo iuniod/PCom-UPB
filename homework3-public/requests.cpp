@@ -59,6 +59,11 @@ char *compute_post_request(const char *host, const char *url, const char* conten
     // Step 2: add the host
     sprintf(line, "Host: %s", host);
     compute_message(message, line);
+
+    if (auth_jwt != NULL) {
+        sprintf(line, "Authorization: Bearer %s", auth_jwt);
+        compute_message(message, line);
+    }
     /* Step 3: add necessary headers (Content-Type and Content-Length are mandatory)
             in order to write Content-Length you must first compute the message size
     */
@@ -86,5 +91,41 @@ char *compute_post_request(const char *host, const char *url, const char* conten
     strcat(message, body_data_buffer);
 
     free(line);
+    return message;
+}
+
+char* compute_delete_request(const char *host, const char *url, char *query_params,
+                            char **cookies, int cookies_count, const char *auth_jwt)
+{
+    char *message = (char*) calloc(BUFLEN, sizeof(char));
+    char *line = (char*) calloc(LINELEN, sizeof(char));
+
+    // Step 1: write the method name, URL, request params (if any) and protocol type
+    if (query_params != NULL) {
+        sprintf(line, "DELETE %s?%s HTTP/1.1", url, query_params);
+    } else {
+        sprintf(line, "DELETE %s HTTP/1.1", url);
+    }
+
+    compute_message(message, line);
+
+    // Step 2: add the host
+    sprintf(line, "Host: %s", host);
+    compute_message(message, line);
+
+    if (auth_jwt != NULL) {
+        sprintf(line, "Authorization: Bearer %s", auth_jwt);
+        compute_message(message, line);
+    }
+
+    // Step 3 (optional): add headers and/or cookies, according to the protocol format
+    if (cookies != NULL) {
+        for (int i = 0; i < cookies_count; i++) {
+            sprintf(line, "Cookie: %s", cookies[i]);
+            compute_message(message, line);
+        }
+    }
+    // Step 4: add final new line
+    compute_message(message, "");
     return message;
 }

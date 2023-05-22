@@ -14,6 +14,7 @@
 
 #define PORT 8080
 #define IP_ADDRESS "34.254.242.81"
+#define APP_JSON "application/json"
 #define REGISTER_URL "/api/v1/tema/auth/register"
 #define LOGIN_URL "/api/v1/tema/auth/login"
 #define LOGOUT_URL "/api/v1/tema/auth/logout"
@@ -23,6 +24,21 @@
 
 #define RESPONSE_OK "HTTP/1.1 200 OK"
 #define RESPONSE_ERROR "HTTP/1.1 400 Bad Request"
+
+#define USERNAME "username"
+#define PASSWORD "password"
+#define TITLE "title"
+#define AUTHOR "author"
+#define GENRE "genre"
+#define PAGE_COUNT "page_count"
+#define PUBLISHER "publisher"
+#define ID "id"
+#define EQ "="
+#define EMPTY ""
+
+#define MSG_ALREADY_LOGGED_IN "You are already logged in\nIf you want to login \
+with another account, please logout first\n\n"	
+#define MSG_INVALID_COMMAND "Invalid command\n\n"
 
 using namespace std;
 using json = nlohmann::json;
