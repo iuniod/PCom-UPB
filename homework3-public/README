@@ -1,0 +1,54 @@
+## TEMA 4 PROTOCOALE DE COMUNICATIE
+#### Nume: Caramida Iustina-Andreea
+#### Grupa: 322CA
+
+--------------
+
+## Descrierea temei
+Am implementat toate cerintele temei.
+
+Am alse sa codez in C++ pentru ca este un limbaj pe care il stapanesc mai bine si care m-a ajutat in codificarea comenzilor; am folosit un unordered_map pentru a mapa fiecare comanda(string) cu un enum, astfel incat sa pot folosi un switch pentru a executa comanda dorita.
+
+Fiindca am folosit limbajul C++, am importat biblioteca nlohmann/json.hpp pentru a putea lucra cu json-uri, cum s-a sugerat si in enuntul temei.
+
+## Implementare
+
+### Structura proiectului
+```
+.
+├── client.cpp / client.h
+├── Makefile
+├── README.md
+├── buffer.cpp / buffer.h
+├── helpers.cpp / helpers.h
+├── requests.cpp / requests.h
+├── json.hpp
+
+```
+
+### Punct de pornire
+Am plecat de la codul din laboratorul 9. Fisierele buffer.* si helpers.* sunt identice cu cele din laborator. In requests.* am adaugat 2 functii noi: una pentru request-ul de tip DELETE si alta pentru a extrage  din raspunsul primit de la server ori cookie-ul de sesiune, ori token-ul JWT, iar alegerea se face in functie de tipul variabilei *type*.
+
+In **client.h** mi-am definit toate define-urile si enum-urile folosite in cod, si mi-am inclus toate bibliotecile necesare.
+
+In **client.cpp** am inceput cu un loop infinit in care citesc de la tastatura comanda dorita si trimit request-ul corespunzator. In functie de raspunsul primit de la server, afisez mesajul corespunzator.
+
+### Comenzi
+- **register** - citesc de la tastatura username-ul si parola, le verific sa fie string-uri valide si apoi trimit request-ul de tip POST. Cu ajutorul unei functii de parsare al raspunsului, verific daca am primit un mesaj de eroare sau nu si afisez mesajul corespunzator.
+- **login** - verific intai de toate daca sunt deja logat, iar daca sunt, afisez un mesaj de eroare. In caz contrar, citesc de la tastatura username-ul si parola, le verific sa fie string-uri valide si apoi trimit request-ul de tip POST. Daca din raspunsul primit de la server rezulta ca am primit un mesaj ok, atunci extrag cookie-ul de sesiune si il salvez in variabila *auth_cookie*.
+- **enter_library** - tot ce am de facut este sa trimit request-ul de tip GET la server, si in cazul in care primesc un mesaj de eroare, sa afisez mesajul corespunzator. Daca nu primesc mesaj de eroare, atunci extrag token-ul JWT si il salvez in variabila *auth_library_token*.
+- **get_books** - trimit request-ul de tip GET la server, iar daca primesc un mesaj de eroare, afisez mesajul corespunzator. Daca nu primesc mesaj de eroare, atunci afisez cartile primite de la server. (acest lucru se face automat in functia de parsare a raspunsului)
+- **get_book** - citesc de la tastatura id-ul cartii dorite, verific sa fie un numar valid, creez url-ul corespunzator si trimit request-ul de tip GET la server. Daca primesc un mesaj de eroare, afisez mesajul corespunzator. Daca nu primesc mesaj de eroare, atunci afisez cartea primita de la server. (tot in functia de parsare a raspunsului)
+- **add_book** - citesc de la tastatura toate campurile cartii dorite, verific sa fie string-uri valide, respectiv numere valide, creez json-ul corespunzator si trimit request-ul de tip POST la server, iar in functie de raspuns afisez mesajul corespunzator.
+- **delete_book** - citesc de la tastatura id-ul cartii dorite, verific sa fie un numar valid, creez url-ul corespunzator si trimit request-ul de tip DELETE la server, iar in functie de raspuns afisez mesajul corespunzator.
+- **logout** - trimit direct request-ul de tip GET la server, iar in functie de raspuns afisez mesajul corespunzator. Daca nu primesc mesaj de eroare, atunci sterg cookie-ul de sesiune si token-ul JWT.
+- **exit** - ies din program.
+- **orice altceva** - afisez un mesaj de eroare.
+
+### Functia de parsare a raspunsului
+Am creat o functie care primeste ca parametru un string si un enum. In functie de tipul de raspuns primit, afisez un mesaj de eroare sau de succes. In cazul in care raspunsul este in JSON. Pentru mesajele de succes, apelez functia `write_success_command` ce afiseaza mesajul corespunzator comenzii. In cazul lui **get_books** si **get_book**, trebuie sa afisez si JSON-ul primit de la server. Acest lucru este luat in calcul in functia `write_success_command`.
+
+### Functii auxiliare
+- **get_body_data**: este singura functie auxiliara ce este apelata in `main()`. Aceasta primeste ca parametru un enum. In functie de tipul comenzii, intoarce ori un json cu datele unei carti/ale unui user, ori un string cu id-ul cartii dorite. Fiind o functie de tip **char***, imi acorda liberatea de a returna ce vreau eu, in functie de caz.
+- **get_json**: primeste ca parametru un enum, si in functie de tipul comenzii, citeste de la tastatura datele cerute si intoarce un json cu acestea. Aceasta functie este apelata in `get_body_data`.
+- **verify_json**: primeste ca parametru un json si verifica daca toate campurile acestuia sunt valide. In cazul in care nu sunt, intoarce false si afiseaza un mesaj de eroare. In caz contrar, intoarce true. Aceasta functie este apelata in `get_body_data`, unde in caz ca unfoarce false, se va returna NULL.

@@ -102,8 +102,7 @@ bool verify_json(json j) {
 	if (!j[USERNAME].is_null()) {
 		string username = j[USERNAME];
 		if (j[USERNAME].is_string() == false ||
-			username.length() > 50 ||
-			username.length() < 3 ||
+			username.length() < 1 ||
 			username.find_first_not_of(ALPHA_NUM) != string::npos) {
 			cout << MSG_INVALID_USERNAME;
 			is_valid = false;
@@ -113,36 +112,44 @@ bool verify_json(json j) {
 	if (!j[PASSWORD].is_null()) {
 		string password = j[PASSWORD];
 		if (j[PASSWORD].is_string() == false ||
-			password.length() > 50 ||
-			password.length() < 3) {
+			password.length() < 1 ||
+			password.find(' ') != string::npos) {
 			cout << MSG_INVALID_PASSWORD;
 			is_valid = false;
 		}
 	}
 
 	if (!j[TITLE].is_null()) {
-		if (j[TITLE].is_string() == false) {
+		string title = j[TITLE];
+		if (j[TITLE].is_string() == false ||
+			title.length() < 1) {
 			cout << MSG_INVALID_TITLE;
 			is_valid = false;
 		}
 	}
 
 	if (!j[AUTHOR].is_null()) {
-		if (j[AUTHOR].is_string() == false) {
+		string author = j[AUTHOR];
+		if (j[AUTHOR].is_string() == false ||
+			author.length() < 1) {
 			cout << MSG_INVALID_AUTHOR;
 			is_valid = false;
 		}
 	}
 
 	if (!j[GENRE].is_null()) {
-		if (j[GENRE].is_string() == false) {
+		string genre = j[GENRE];
+		if (j[GENRE].is_string() == false ||
+			genre.length() < 1) {
 			cout << MSG_INVALID_GENRE;
 			is_valid = false;
 		}
 	}
 
 	if (!j[PUBLISHER].is_null()) {
-		if (j[PUBLISHER].is_string() == false) {
+		string publisher = j[PUBLISHER];
+		if (j[PUBLISHER].is_string() == false ||
+			publisher.length() < 1) {
 			cout << MSG_INVALID_PUBLISHER;
 			is_valid = false;
 		}
@@ -201,34 +208,100 @@ char* get_body_data(string_code command) {
 	return payload;
 }
 
+/**
+ * @brief Write the success message according to the command type
+ * 
+ * @param command type of command
+ * @param payload the payload of the message
+ */
+void write_success_command(string_code command, string payload) {
+	switch (command) {
+		case LOGIN: {
+			cout << MSG_LOGIN_SUCCESS;
+			break;
+		}
+		case REGISTER: {
+			cout << MSG_REGISTER_SUCCESS;
+			break;
+		}
+		case LOGOUT: {
+			cout << MSG_LOGOUT_SUCCESS;
+			break;
+		}
+		case ADD_BOOK: {
+			cout << MSG_ADD_BOOK_SUCCESS;
+			break;
+		}
+		case DELETE_BOOK: {
+			cout << MSG_DELETE_BOOK_SUCCESS;
+			break;
+		}
+		case ENTER_LIBRARY: {
+			cout << MSG_ENTER_LIBRARY_SUCCESS;
+			break;
+		}
+		case GET_BOOK: {
+			json jsonData = json::parse(payload);
+			int id = jsonData[ID];
+			string title = jsonData[TITLE];
+			string author = jsonData[AUTHOR];
+			string genre = jsonData[GENRE];
+			string publisher = jsonData[PUBLISHER];
+			int pageCount = jsonData[PAGE_COUNT];
+			printf(PRINT_ALL_BOOK, id, title.c_str(), author.c_str(),
+					genre.c_str(), publisher.c_str(), pageCount);
+			break;
+		}
+		case GET_BOOKS: {
+			json jsonData = json::parse(payload);
+			int cnt = 0;
+			cout << "[";
+			for (auto& elem : jsonData) {
+				int id = elem[ID];
+				string title = elem[TITLE];
+				printf(PRINT_BOOK, title.c_str(), id);
+				if (cnt < jsonData.size() - 1) {
+					cout << ",\n";
+				}
+				cnt++;
+			}
+			cout << "]\n";
+		}
 
-void parse_response(char* response) {
+		default: {
+			cout << MSG_SUCCESS;
+			break;
+		}
+	}
+}
+
+/**
+ * @brief Parse the response from the server and print the result
+ * 
+ * @param response the response from the server
+ * @param command the type of command
+ */
+void parse_response(char* response, string_code command) {
 	string response_str(response);
     size_t pos = response_str.find("\r\n\r\n");
-    if (pos == std::string::npos) {
-        std::cout << "Invalid HTTP response" << std::endl;
+    if (pos == string::npos) {
+        cout << "Invalid HTTP response\n";
         return;
     }
 
     /* Extract the JSON payload */
-    std::string payload = response_str.substr(pos + 4);
+    string payload = response_str.substr(pos + 4);
 
     try {
         json jsonData = json::parse(payload);
 
         if (jsonData.contains("error") && jsonData["error"].is_string()) {
-            std::cout << "Error: " << jsonData["error"].get<std::string>() << std::endl;
-        } else if (jsonData.is_array()) {
-			cout << '[';
-			for (auto& elem : jsonData) {
-				std::cout << elem << std::endl;
-			}
-			cout << ']';
-		} else {
-			std::cout << payload << std::endl;
+            cout << "Error: " << jsonData["error"].get<string>() << "\n\n";
+        } else {
+			write_success_command(command, payload);
 		}
     } catch (const json::parse_error& e) {
-        cout << MSG_SUCCESS;
+		write_success_command(command, payload);
     }
 }
 
@@ -267,11 +340,11 @@ int main() {
 
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				parse_response(response);
+				parse_response(response, code);
 
 				/* Extract the cookie from the response */
 				if (strstr(response, RESPONSE_OK) != NULL) {
-					auth_cookie = extract_cookie(response);
+					auth_cookie = extract(response, 0);
 				}
 				
 				/* Close connection to server */
@@ -294,7 +367,7 @@ int main() {
 
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				parse_response(response);
+				parse_response(response, code);
 
 				/* Close connection to server */
 				close_connection(socket_fd);
@@ -314,11 +387,11 @@ int main() {
 
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				parse_response(response);
+				parse_response(response, code);
 
 				/* Extract the library token from the response */
 				if (strstr(response, RESPONSE_OK) != NULL) {
-					auth_library_token = extract_library_token(response);
+					auth_library_token = extract(response, 1);
 				}
 
 				/* Close connection to server */
@@ -341,7 +414,7 @@ int main() {
 				
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				parse_response(response);
+				parse_response(response, code);
 
 				/* Close connection to server */
 				close_connection(socket_fd);
@@ -372,7 +445,7 @@ int main() {
 				
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				parse_response(response);
+				parse_response(response, code);
 
 				/* Close connection to server */
 				close_connection(socket_fd);
@@ -397,7 +470,7 @@ int main() {
 				char *message = compute_post_request(IP_ADDRESS, BOOKS_URL, APP_JSON, &payload, 1, &auth_cookie_str, 1, auth_library_token_str);
 				send_to_server(socket_fd, message);
 				char *response = receive_from_server(socket_fd);
-				parse_response(response);
+				parse_response(response, code);
 
 				/* Close connection to server */
 				close_connection(socket_fd);
@@ -427,7 +500,7 @@ int main() {
 
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				parse_response(response);
+				parse_response(response, code);
 
 				/* Close connection to server */
 				close_connection(socket_fd);
@@ -447,7 +520,7 @@ int main() {
 
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				parse_response(response);
+				parse_response(response, code);
 
 				/* Check if the response is ok and clear the authentification cookie and library token */
 				if (strstr(response, RESPONSE_OK) != NULL) {

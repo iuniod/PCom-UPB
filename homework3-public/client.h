@@ -1,8 +1,6 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-
-
 #include <iostream>
 #include <sstream>
 #include <iterator>
@@ -23,8 +21,6 @@
 #define BOOK_URL "/api/v1/tema/library/books/"
 
 #define RESPONSE_OK "HTTP/1.1 200 OK"
-#define RESPONSE_ERROR "HTTP/1.1 400 Bad Request"
-
 #define USERNAME "username"
 #define PASSWORD "password"
 #define TITLE "title"
@@ -43,11 +39,9 @@
 #define MSG_ALREADY_LOGGED_IN "You are already logged in\nIf you want to login \
 with another account, please logout first\n\n"	
 #define MSG_INVALID_COMMAND "Invalid command\n\n"
-#define MSG_INVALID_USERNAME "Invalid username - username must be at least 3 \
-characters long, at most 50 characters long and must contain only letters, \
+#define MSG_INVALID_USERNAME "Invalid username - username must contain only letters, \
 digits and underscores\n"
-#define MSG_INVALID_PASSWORD "Invalid password - password must be at least 3 \
-characters long and at most 50 characters long\n"
+#define MSG_INVALID_PASSWORD "Invalid password - password must not contain spaces\n"
 #define MSG_INVALID_TITLE "Invalid title - title must be a non-empty string\n"
 #define MSG_INVALID_AUTHOR "Invalid author - author must be a non-empty string\n"
 #define MSG_INVALID_GENRE "Invalid genre - genre must be a non-empty string\n"
@@ -58,7 +52,19 @@ non-empty string\n"
 #define MSG_INVALID_ID "Invalid id - id must be a positive integer\n"
 #define MSG_INVALID_JSON "Invalid JSON - please check your input\n\n"
 #define MSG_TRY_AGAIN "Please try again\n\n"
+
 #define MSG_SUCCESS "The request was successful\n\n"
+#define MSG_REGISTER_SUCCESS "You have successfully registered\n\n"
+#define MSG_LOGIN_SUCCESS "You have successfully logged in\n\n"
+#define MSG_LOGOUT_SUCCESS "You have successfully logged out\n\n"
+#define MSG_ENTER_LIBRARY_SUCCESS "You have successfully entered the library\n\n"
+#define MSG_GET_BOOKS_SUCCESS "You have successfully retrieved the books\n\n"
+#define MSG_GET_BOOK_SUCCESS "You have successfully retrieved the book\n\n"
+#define MSG_ADD_BOOK_SUCCESS "You have successfully added the book\n\n"
+#define MSG_DELETE_BOOK_SUCCESS "You have successfully deleted the book\n\n"
+
+#define PRINT_ALL_BOOK "{\nid: %d\ntitle: %s\nauthor: %s\ngenre: %s\npublisher: %s\npage_count: %d\n}\n"
+#define PRINT_BOOK "{\ntitle: %s\nid: %d\n}"
 
 #define ALPHA_NUM "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
@@ -92,10 +98,6 @@ const unordered_map <string, string_code> codes = {
 
 string_code hashit (std::string const& command) {
 	return codes.find(command) != codes.end() ? codes.at(command) : UNDEFINED;
-}
-
-bool is_alpha_num(string str) {
-	return str.find_first_not_of(ALPHA_NUM) == string::npos;
 }
 
 #endif // CLIENT_H

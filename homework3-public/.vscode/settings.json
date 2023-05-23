@@ -1,0 +1,7 @@
+{
+	"files.associations": {
+		"*.toml": "plaintext",
+		"README": "markdown",
+		"iostream": "cpp"
+	}
+}

@@ -29,18 +29,12 @@ char *compute_delete_request(const char *host, const char *url, char *query_para
 							char **cookies, int cookies_count, const char *auth_jwt);
 
 /**
- * @brief Extract the cookie from the response
+ * @brief Extracts the cookie or the jwt from the response
  * 
  * @param response the response from the server
- * @return string the cookie
+ * @param type 0 for cookie, 1 for jwt
+ * @return std::string the cookie or the jwt
  */
-std::string extract_cookie(char *response);
+std::string extract(char* response, int type);
 
-/**
- * @brief Extract the library token from the response
- * 
- * @param response the response from the server
- * @return string the library token
- */
-std::string extract_library_token(char *response);
 #endif
