@@ -1,12 +1,3 @@
-#include <stdlib.h>     /* exit, atoi, malloc, free */
-#include <stdio.h>
-#include <unistd.h>     /* read, write, close */
-#include <string.h>     /* memcpy, memset */
-#include <sys/socket.h> /* socket, connect */
-#include <netinet/in.h> /* struct sockaddr_in, struct sockaddr */
-#include <netdb.h>      /* struct hostent, gethostbyname */
-#include <arpa/inet.h>
-#include "helpers.h"
 #include "requests.h"
 
 char *compute_get_request(const char *host, const char *url, char *query_params,
@@ -128,4 +119,40 @@ char* compute_delete_request(const char *host, const char *url, char *query_para
     // Step 4: add final new line
     compute_message(message, "");
     return message;
+}
+
+std::string extract_cookie(char *response) {
+	char *cookie = strstr(response, "Set-Cookie: ");
+	if (cookie == NULL) {
+		return EMPTY;
+	}
+	cookie += strlen("Set-Cookie: ");
+	
+	char *end = strstr(cookie, ";");
+	if (end == NULL) {
+		return EMPTY;
+	}
+
+	char *auth_cookie = (char*) calloc(end - cookie + 1, sizeof(char));
+	strncpy(auth_cookie, cookie, end - cookie);
+
+	return std::string(auth_cookie);
+}
+
+std::string extract_library_token(char *response) {
+	char *token = strstr(response, "token");
+	if (token == NULL) {
+		return EMPTY;
+	}
+	token += strlen("token") + 3;
+
+	char *end = strstr(token, "\"");
+	if (end == NULL) {
+		return EMPTY;
+	}
+
+	char *auth_token = (char*) calloc(end - token + 1, sizeof(char));
+	strncpy(auth_token, token, end - token);
+
+	return std::string(auth_token);
 }

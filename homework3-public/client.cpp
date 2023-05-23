@@ -37,10 +37,10 @@ json get_json(string_code command) {
 			string id;
 			cout << ID EQ;
 			getline(cin, id);
-			if (isdigit(id.c_str()) == false) {
-				j[ID] = "ERROR";
-			} else {
+			try {
 				j[ID] = stoi(id);
+			} catch (const invalid_argument& ia) {
+				j[ID] = "ERROR";
 			}
 			break;
 		}
@@ -60,10 +60,10 @@ json get_json(string_code command) {
 			j[AUTHOR] = author;
 			j[GENRE] = genre;
 			j[PUBLISHER] = publisher;
-			if (isdigit(atoi(page_count.c_str())) == false) {
-				j[PAGE_COUNT] = "ERROR";
-			} else {
+			try {
 				j[PAGE_COUNT] = stoi(page_count);
+			} catch (const invalid_argument& ia) {
+				j[PAGE_COUNT] = "ERROR";
 			}
 			break;
 		}
@@ -71,10 +71,10 @@ json get_json(string_code command) {
 			string id;
 			cout << ID EQ;
 			getline(cin, id);
-			if (isdigit(atoi(id.c_str())) == false) {
-				j[ID] = "ERROR";
-			} else {
+			try {
 				j[ID] = stoi(id);
+			} catch (const invalid_argument& ia) {
+				j[ID] = "ERROR";
 			}
 			break;
 		}
@@ -85,55 +85,88 @@ json get_json(string_code command) {
 	return j;
 }
 
-bool verify_json(json j, string_code command) {
-	switch (command) {
-		case REGISTER: {
-			/* Verify if the json object contains in each field a string */
-			if (j[USERNAME].is_string() == false || j[PASSWORD].is_string() == false) {
-				cout << MSG_INVALID_COMMAND;
-				return false;
-			}
-			break;
-		}
-		case LOGIN: {
-			/* Verify if the json object contains in each field a string */
-			if (j[USERNAME].is_string() == false || j[PASSWORD].is_string() == false) {
-				cout << MSG_INVALID_COMMAND;
-				return false;
-			}
-			break;
-		}
-		case GET_BOOK: {
-			/* Verify if the json object contains in each field an integer */
-			if (j[ID].is_number_integer() == false) {
-				cout << MSG_INVALID_COMMAND;
-				return false;
-			}
-			break;
-		}
-		case ADD_BOOK: {
-			/* Verify if the json object contains in each field a string or an integer */
-			if (j[TITLE].is_string() == false || j[AUTHOR].is_string() == false ||
-				j[GENRE].is_string() == false || j[PUBLISHER].is_string() == false ||
-				j[PAGE_COUNT].is_number_integer() == false) {
-				cout << MSG_INVALID_COMMAND;
-				return false;
-			}
-			break;
-		}
-		case DELETE_BOOK: {
-			/* Verify if the json object contains in each field an integer */
-			if (j[ID].is_number_integer() == false) {
-				cout << MSG_INVALID_COMMAND;
-				return false;
-			}
-			break;
-		}
-		default: {
-			break;
+/**
+ * @brief Verify if the fields of the json are valid
+ * 
+ * @param j the json object
+ * @return true if the fields are valid, false otherwise
+ */
+bool verify_json(json j) {
+	bool is_valid = true;
+
+	if (j.is_null()) {
+		cout << MSG_INVALID_JSON;
+		return false;
+	}
+
+	if (!j[USERNAME].is_null()) {
+		string username = j[USERNAME];
+		if (j[USERNAME].is_string() == false ||
+			username.length() > 50 ||
+			username.length() < 3 ||
+			username.find_first_not_of(ALPHA_NUM) != string::npos) {
+			cout << MSG_INVALID_USERNAME;
+			is_valid = false;
 		}
 	}
-	return true;
+
+	if (!j[PASSWORD].is_null()) {
+		string password = j[PASSWORD];
+		if (j[PASSWORD].is_string() == false ||
+			password.length() > 50 ||
+			password.length() < 3) {
+			cout << MSG_INVALID_PASSWORD;
+			is_valid = false;
+		}
+	}
+
+	if (!j[TITLE].is_null()) {
+		if (j[TITLE].is_string() == false) {
+			cout << MSG_INVALID_TITLE;
+			is_valid = false;
+		}
+	}
+
+	if (!j[AUTHOR].is_null()) {
+		if (j[AUTHOR].is_string() == false) {
+			cout << MSG_INVALID_AUTHOR;
+			is_valid = false;
+		}
+	}
+
+	if (!j[GENRE].is_null()) {
+		if (j[GENRE].is_string() == false) {
+			cout << MSG_INVALID_GENRE;
+			is_valid = false;
+		}
+	}
+
+	if (!j[PUBLISHER].is_null()) {
+		if (j[PUBLISHER].is_string() == false) {
+			cout << MSG_INVALID_PUBLISHER;
+			is_valid = false;
+		}
+	}
+
+	if (!j[PAGE_COUNT].is_null()) {
+		if (j[PAGE_COUNT].is_number() == false) {
+			cout << MSG_INVALID_PAGE_COUNT;
+			is_valid = false;
+		}
+	}
+
+	if (!j[ID].is_null()) {
+		if (j[ID].is_number() == false) {
+			cout << MSG_INVALID_ID;
+			is_valid = false;
+		}
+	}
+
+	if (is_valid == false) {
+		cout << MSG_TRY_AGAIN;
+	}
+
+	return is_valid;
 }
 
 /**
@@ -146,7 +179,7 @@ bool verify_json(json j, string_code command) {
  */
 char* get_body_data(string_code command) {
 	json j = get_json(command);
-	if (verify_json(j, command) == false) {
+	if (verify_json(j) == false) {
 		return NULL;
 	}
 
@@ -168,52 +201,35 @@ char* get_body_data(string_code command) {
 	return payload;
 }
 
-/**
- * @brief Extract the cookie from the response
- * 
- * @param response the response from the server
- * @return string the cookie
- */
-string extract_cookie(char *response) {
-	char *cookie = strstr(response, "Set-Cookie: ");
-	if (cookie == NULL) {
-		return EMPTY;
-	}
-	cookie += strlen("Set-Cookie: ");
-	
-	char *end = strstr(cookie, ";");
-	if (end == NULL) {
-		return EMPTY;
-	}
 
-	char *auth_cookie = (char*) calloc(end - cookie + 1, sizeof(char));
-	strncpy(auth_cookie, cookie, end - cookie);
+void parse_response(char* response) {
+	string response_str(response);
+    size_t pos = response_str.find("\r\n\r\n");
+    if (pos == std::string::npos) {
+        std::cout << "Invalid HTTP response" << std::endl;
+        return;
+    }
 
-	return string(auth_cookie);
-}
+    /* Extract the JSON payload */
+    std::string payload = response_str.substr(pos + 4);
 
-/**
- * @brief Extract the library token from the response
- * 
- * @param response the response from the server
- * @return string the library token
- */
-string extract_library_token(char *response) {
-	char *token = strstr(response, "token");
-	if (token == NULL) {
-		return EMPTY;
-	}
-	token += strlen("token") + 3;
+    try {
+        json jsonData = json::parse(payload);
 
-	char *end = strstr(token, "\"");
-	if (end == NULL) {
-		return EMPTY;
-	}
-
-	char *auth_token = (char*) calloc(end - token + 1, sizeof(char));
-	strncpy(auth_token, token, end - token);
-
-	return string(auth_token);
+        if (jsonData.contains("error") && jsonData["error"].is_string()) {
+            std::cout << "Error: " << jsonData["error"].get<std::string>() << std::endl;
+        } else if (jsonData.is_array()) {
+			cout << '[';
+			for (auto& elem : jsonData) {
+				std::cout << elem << std::endl;
+			}
+			cout << ']';
+		} else {
+			std::cout << payload << std::endl;
+		}
+    } catch (const json::parse_error& e) {
+        cout << MSG_SUCCESS;
+    }
 }
 
 int main() {
@@ -251,7 +267,7 @@ int main() {
 
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				puts(response);
+				parse_response(response);
 
 				/* Extract the cookie from the response */
 				if (strstr(response, RESPONSE_OK) != NULL) {
@@ -278,7 +294,7 @@ int main() {
 
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				puts(response);
+				parse_response(response);
 
 				/* Close connection to server */
 				close_connection(socket_fd);
@@ -298,7 +314,7 @@ int main() {
 
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				puts(response);
+				parse_response(response);
 
 				/* Extract the library token from the response */
 				if (strstr(response, RESPONSE_OK) != NULL) {
@@ -325,7 +341,7 @@ int main() {
 				
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				puts(response);
+				parse_response(response);
 
 				/* Close connection to server */
 				close_connection(socket_fd);
@@ -356,7 +372,7 @@ int main() {
 				
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				puts(response);
+				parse_response(response);
 
 				/* Close connection to server */
 				close_connection(socket_fd);
@@ -381,7 +397,7 @@ int main() {
 				char *message = compute_post_request(IP_ADDRESS, BOOKS_URL, APP_JSON, &payload, 1, &auth_cookie_str, 1, auth_library_token_str);
 				send_to_server(socket_fd, message);
 				char *response = receive_from_server(socket_fd);
-				puts(response);
+				parse_response(response);
 
 				/* Close connection to server */
 				close_connection(socket_fd);
@@ -411,7 +427,7 @@ int main() {
 
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				puts(response);
+				parse_response(response);
 
 				/* Close connection to server */
 				close_connection(socket_fd);
@@ -431,7 +447,7 @@ int main() {
 
 				/* Receive the response */
 				char *response = receive_from_server(socket_fd);
-				puts(response);
+				parse_response(response);
 
 				/* Check if the response is ok and clear the authentification cookie and library token */
 				if (strstr(response, RESPONSE_OK) != NULL) {

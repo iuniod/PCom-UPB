@@ -33,12 +33,34 @@
 #define PAGE_COUNT "page_count"
 #define PUBLISHER "publisher"
 #define ID "id"
+#define STATUS "status"
+#define DATA "data"
+#define ERROR "error"
 #define EQ "="
 #define EMPTY ""
 
+#define MSG_EMPTY "Empty message\n\n"
 #define MSG_ALREADY_LOGGED_IN "You are already logged in\nIf you want to login \
 with another account, please logout first\n\n"	
 #define MSG_INVALID_COMMAND "Invalid command\n\n"
+#define MSG_INVALID_USERNAME "Invalid username - username must be at least 3 \
+characters long, at most 50 characters long and must contain only letters, \
+digits and underscores\n"
+#define MSG_INVALID_PASSWORD "Invalid password - password must be at least 3 \
+characters long and at most 50 characters long\n"
+#define MSG_INVALID_TITLE "Invalid title - title must be a non-empty string\n"
+#define MSG_INVALID_AUTHOR "Invalid author - author must be a non-empty string\n"
+#define MSG_INVALID_GENRE "Invalid genre - genre must be a non-empty string\n"
+#define MSG_INVALID_PAGE_COUNT "Invalid page_count - page_count must be a \
+positive integer\n"
+#define MSG_INVALID_PUBLISHER "Invalid publisher - publisher must be a \
+non-empty string\n"
+#define MSG_INVALID_ID "Invalid id - id must be a positive integer\n"
+#define MSG_INVALID_JSON "Invalid JSON - please check your input\n\n"
+#define MSG_TRY_AGAIN "Please try again\n\n"
+#define MSG_SUCCESS "The request was successful\n\n"
+
+#define ALPHA_NUM "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
 using namespace std;
 using json = nlohmann::json;
@@ -70,6 +92,10 @@ const unordered_map <string, string_code> codes = {
 
 string_code hashit (std::string const& command) {
 	return codes.find(command) != codes.end() ? codes.at(command) : UNDEFINED;
+}
+
+bool is_alpha_num(string str) {
+	return str.find_first_not_of(ALPHA_NUM) == string::npos;
 }
 
 #endif // CLIENT_H
