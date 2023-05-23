@@ -121,38 +121,36 @@ char* compute_delete_request(const char *host, const char *url, char *query_para
     return message;
 }
 
-std::string extract_cookie(char *response) {
-	char *cookie = strstr(response, "Set-Cookie: ");
-	if (cookie == NULL) {
-		return EMPTY;
-	}
-	cookie += strlen("Set-Cookie: ");
-	
-	char *end = strstr(cookie, ";");
-	if (end == NULL) {
-		return EMPTY;
-	}
+std::string extract_cookie(const char* response) {
+    const char* cookie = strstr(response, "connect.sid");
+    if (cookie == nullptr) {
+        return "";
+    }
+    cookie += strlen("connect.sid") + 2;
 
-	char *auth_cookie = (char*) calloc(end - cookie + 1, sizeof(char));
-	strncpy(auth_cookie, cookie, end - cookie);
+    const char* end = strstr(cookie, ";");
+    if (end == nullptr) {
+        return "";
+    }
 
-	return std::string(auth_cookie);
+    std::string auth_cookie(cookie, end - cookie);
+
+    return auth_cookie;
 }
 
-std::string extract_library_token(char *response) {
-	char *token = strstr(response, "token");
-	if (token == NULL) {
-		return EMPTY;
-	}
-	token += strlen("token") + 3;
+std::string extract_library_token(const char* response) {
+    const char* token = strstr(response, "token");
+    if (token == nullptr) {
+        return "";
+    }
+    token += strlen("token") + 3;
 
-	char *end = strstr(token, "\"");
-	if (end == NULL) {
-		return EMPTY;
-	}
+    const char* end = strstr(token, "\"");
+    if (end == nullptr) {
+        return "";
+    }
 
-	char *auth_token = (char*) calloc(end - token + 1, sizeof(char));
-	strncpy(auth_token, token, end - token);
+    std::string auth_token(token, end - token);
 
-	return std::string(auth_token);
+    return auth_token;
 }
